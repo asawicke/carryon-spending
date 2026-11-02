@@ -1,0 +1,19 @@
+frontend/node_modules/
+frontend/dist/
+backend/__pycache__/
+backend/tests/__pycache__/
+backend/*.db
+backend/*.db-*
+backend/data/
+.DS_Store
+.venv/
+.env
+.env.*
+!.env.example
+*.pyc
+
+# Local course reference material (the repository contains the app source).
+Assignment 4*.md
+Assignment 4*.docx
+PROJECT_CONTEXT.md
+references/
