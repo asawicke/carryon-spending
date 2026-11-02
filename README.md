@@ -1,6 +1,6 @@
 # CarryOn Spending — EECS 497 capstone
 
-## Assignment 4 prototype
+## Lo-Fi prototype
 
 This is a working React/Flask progressive web app for the team's priority budget → expense → decision flow. It lets a student create a trip, set a total and category budget, review commonly missed costs, enter or edit an expense in local currency, and see the updated home-currency balance, category breakdown, daily guidance, and a possible-purchase calculation. Trip and expense records live in SQLite. Expense submissions use a client-generated ID so a queued offline retry creates at most one server record.
 
