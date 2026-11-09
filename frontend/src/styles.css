@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-
 :root { font-family: 'DM Sans', Arial, sans-serif; color: #171717; background: #f7f7f5; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
@@ -137,3 +135,131 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .form-error { color: #a83326; font-size: 11px; }
 @media (min-width: 650px) { .content { padding-top: 38px; } .modal-backdrop { align-items: center; } .modal { border-radius: 8px; } }
 @media (max-width: 420px) { .header-inner { padding: 0 15px; } .brand { font-size: 22px; } .content { padding-left: 16px; padding-right: 16px; } .budget-card { padding-left: 17px; padding-right: 17px; } .budget-guidance { margin-left: -17px; margin-right: -17px; padding-left: 17px; padding-right: 17px; } .donut { width: 88px; } .donut > div { width: 62px; } .donut strong { font-size: 17px; } .budget-hero { min-height: 133px; } .trip-select-label select { max-width: 124px; } }
+
+/* Refinement tokens: existing card order, container width, and navigation placement stay intact. */
+:root { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #182a35; background: #f4f7f8; --ink: #182a35; --muted: #475b67; --line: #526772; }
+.section-today { --accent: #075f68; --tint: #e9f5f3; }
+.section-expenses { --accent: #654398; --tint: #f3eef9; }
+.section-plan { --accent: #8a4b08; --tint: #fff4e5; }
+a { color: #064f78; }
+.brand { color: var(--ink); text-decoration: none; }
+.brand-dot { color: var(--accent); }
+.site-header, .bottom-nav { border-color: #c3d0d5; }
+.site-header { border-top: 4px solid var(--accent); }
+.content { scroll-margin-top: 90px; }
+.content h1 { scroll-margin-top: 100px; }
+.intro p, .eyebrow, .metric-card small, .expense-main span, .expense-amount span,
+.rate-note, .field-help, .card-description, .impact-card p, .impact-result span, .empty-list { color: var(--muted); }
+.eyebrow, .field-label, .metric-card small, .field-help, .rate-note, .expense-main span, .expense-amount span,
+.button.small, .small-tag, .text-link, .nav-inner button, .summary-row, .allocation, .save-message, .form-error { font-size: 12px; }
+.field-help, .rate-note { line-height: 1.55; }
+.trip-phase { margin-top: 12px !important; font-size: 13px !important; font-weight: 650; }
+.budget-card, .plan-total, .expenses-total { background: var(--accent); border-color: var(--accent); }
+.budget-card .eyebrow, .plan-total .eyebrow, .expenses-total .eyebrow,
+.budget-hero p, .plan-total p, .expenses-total p { color: #fff; }
+.budget-hero h2 { font-size: clamp(34px, 8vw, 57px); letter-spacing: -.05em; overflow-wrap: anywhere; }
+.budget-hero > div:first-child { min-width: 0; }
+.donut { background: conic-gradient(#fff var(--percent), #456d73 var(--percent)); }
+.donut > div { background: var(--accent); }
+.donut span { color: #fff; }
+.budget-guidance { background: rgb(0 0 0 / .18); color: #fff; }
+.add-expense-card { border-color: var(--accent); box-shadow: 3px 3px 0 var(--accent); }
+.plus-square, .button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.button.primary:hover { background: #183b4a; }
+.button.outline { border-color: var(--accent); color: var(--accent); }
+.add-expense-card small { color: var(--muted); }
+.metric-card, .plan-card, .list-card, .category-summary, .impact-card { border-color: #aabcc5; border-radius: 8px; }
+.impact-card { background: var(--tint); }
+.impact-result { border-left-color: var(--accent); }
+.impact-result.negative, .allocation.over strong, .form-error, .pace-note.over { color: #9d291e; }
+.nav-inner button { min-height: 72px; color: #475b67; gap: 5px; }
+.nav-inner .nav-today.active { color: #075f68; border-top-color: #075f68; background: #e9f5f3; }
+.nav-inner .nav-expenses.active { color: #654398; border-top-color: #654398; background: #f3eef9; }
+.nav-inner .nav-plan.active { color: #8a4b08; border-top-color: #8a4b08; background: #fff4e5; }
+.nav-inner .active span { text-decoration: underline; text-underline-offset: 4px; }
+.nav-inner button:focus-visible { outline-offset: -6px; }
+.nav-inner .nav-plan { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.text-input, .dollar-input, .amount-field, .amount-field select, .impact-input, .trip-select-label select { border-color: var(--line); }
+.text-input { height: 46px; font-size: 16px; }
+.dollar-input input, .impact-input input { font-size: 16px; }
+.dollar-input.compact { width: 139px; min-height: 44px; }
+.field-label { line-height: 1.5; }
+.button, .icon-button, .text-link { min-height: 44px; }
+.icon-button { min-width: 44px; }
+.trip-select-label select { min-height: 44px; font-size: 13px; }
+.row-edit { width: 44px; }
+.expense-main strong, .expense-amount strong { font-size: 13px; }
+.expense-main strong, .expense-main span { white-space: normal; overflow-wrap: anywhere; }
+.expense-row { gap: 8px; }
+.expense-amount { flex: 0 0 auto; }
+input[type=number] { appearance: textfield; -moz-appearance: textfield; }
+input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid #165bb1; outline-offset: 3px; }
+.amount-field:focus-within, .dollar-input:focus-within, .impact-input:focus-within { outline: 3px solid #165bb1; outline-offset: 3px; }
+.amount-field input:focus-visible, .dollar-input input:focus-visible, .impact-input input:focus-visible { outline: none; }
+.skip-link { position: fixed; z-index: 100; left: 12px; top: -100px; padding: 12px; background: #fff; color: #182a35; }
+.skip-link:focus { top: 12px; }
+.modal { position: fixed; inset: auto 0 0; margin: 0 auto; max-height: 90dvh; border-color: #526772; border-radius: 12px 12px 0 0; color: var(--ink); --accent: #654398; }
+.modal::backdrop { background: rgb(15 30 40 / .65); }
+.modal-head h2 { margin-top: 3px; }
+.modal .field-help { font-size: 12px; }
+.amount-field select { font-size: 14px; width: 84px; }
+.optional { color: var(--muted); font-weight: 400; }
+.form-actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+.plan-card h2 { font-size: 19px; margin-top: 0; }
+.plan-card h3, .category-summary h3 { font-size: 15px; }
+.pace-note { padding: 12px 14px; border-left: 4px solid var(--accent); background: var(--tint); font-size: 13px; line-height: 1.5; }
+.chart-grid { display: grid; gap: 14px; }
+.chart-grid > * { min-width: 0; }
+.category-summary { padding-bottom: 12px; }
+.summary-row { grid-template-columns: minmax(75px, 1fr) minmax(32px, 1fr) auto; gap: 8px; }
+.summary-row > span { overflow-wrap: anywhere; }
+.summary-bar { height: 10px; background: #dbe4e9; }
+.donut-card { margin: 0; padding: 18px; border: 1px solid #aabcc5; border-radius: 8px; background: #fff; }
+.donut-card figcaption { font-size: 15px; font-weight: 700; }
+.category-donut { display: block; width: 180px; max-width: 100%; margin: 10px auto; }
+.donut-total { font-size: 18px; font-weight: 750; fill: #182a35; }
+.donut-caption { font-size: 7px; fill: #475b67; }
+.chart-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.chart-legend li { display: grid; grid-template-columns: 14px 1fr auto; gap: 7px; font-size: 12px; align-items: center; overflow-wrap: anywhere; }
+.legend-swatch { height: 12px; width: 12px; border-radius: 2px; border: 1px solid #182a35; }
+.donut-card details { margin-top: 14px; font-size: 12px; line-height: 1.5; }
+summary { cursor: pointer; padding: 12px 0; min-height: 44px; font-weight: 650; }
+.category-progress { padding: 13px 0; border-bottom: 1px solid #dce4e7; font-size: 13px; }
+.category-progress:last-child { border: 0; }
+.category-progress > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.category-progress small { display: block; color: var(--muted); margin-top: 5px; }
+progress { display: block; width: 100%; height: 12px; accent-color: var(--accent); }
+.preparation-list { display: grid; gap: 10px; }
+.preparation-list label { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; min-height: 44px; }
+.preparation-list strong { font-size: 13px; }
+.preparation-list small { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 4px; }
+input[type=checkbox], .extra-row input[type=checkbox] { appearance: auto; width: 24px; height: 24px; flex: 0 0 24px; margin: 0; accent-color: var(--accent); }
+.preparation-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 18px 0; background: var(--tint); padding: 12px; border-radius: 6px; font-size: 13px; }
+.plan-card:has(.preparation-list), .category-progress, .flight-panel { margin-top: 16px; }
+.flight-panel { border: 1px solid #aabcc5; background: #fff; border-radius: 8px; padding: 0 18px; }
+.flight-panel > summary { padding-block: 18px; }
+.flight-body { padding-bottom: 18px; }
+.fare-search { border-bottom: 1px solid #aabcc5; padding-bottom: 22px; margin-bottom: 22px; }
+.fare-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.fare-offer h4 { font-size: 1rem; margin: 0 0 8px; }
+.fare-offer li, .booking-options a { overflow-wrap: anywhere; }
+.fare-offer ul { padding-left: 20px; }
+.fare-leg { margin-block: 12px; }
+.fare-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.fare-actions .button { flex: 1 1 180px; }
+.saved-fare-quotes { margin-top: 18px; }
+.saved-flight { border-left: 4px solid var(--accent); padding: 8px 12px; margin-block: 12px; background: var(--tint); }
+.saved-flight h3 { font-size: 15px; margin: 4px 0; }
+.saved-flight p { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.lookup-row { display: flex; gap: 8px; }
+.lookup-row input { min-width: 0; }
+.lookup-row button { flex-shrink: 0; }
+.check-option { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; font-size: 13px; line-height: 1.6; }
+.status-banner, .offline-banner { font-size: 13px; line-height: 1.5; border-radius: 6px; border-color: #526772; }
+.status-banner { align-items: flex-start; }
+.save-message.success { color: #204f35; background: #eef7f0; border-color: #48785a; }
+@media (min-width: 650px) { .chart-grid { grid-template-columns: 1fr 1fr; } .modal { inset: 0; margin: auto; height: fit-content; border-radius: 12px; } }
+@media (max-width: 420px) { .expense-mark { display: none; } .daily-grid { gap: 8px; } .metric-card { padding: 14px; } .metric-card strong { font-size: 23px; } .summary-row { font-size: 11px; } .dollar-input.compact { width: 120px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+@media (forced-colors: active) { .legend-swatch, .budget-card, .nav-inner .active { border: 2px solid CanvasText; } .summary-bar i { background: CanvasText !important; } }

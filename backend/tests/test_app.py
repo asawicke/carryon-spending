@@ -9,11 +9,17 @@ from pathlib import Path
 from backend.app import create_app
 
 
+def fixture_http(url):
+    if "frankfurter" in url:
+        return [{"quote": c, "rate": r, "date": "2026-11-06"} for c, r in (("EUR", .92), ("GBP", .79), ("JPY", 150), ("CAD", 1.36))]
+    raise AssertionError("Unexpected network request")
+
+
 class CarryOnApiTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.db_path = str(Path(self.temp.name) / "carryon.db")
-        self.app = create_app({"TESTING": True, "DATABASE_PATH": self.db_path, "SEED_DEMO": False})
+        self.app = create_app({"TESTING": True, "DATABASE_PATH": self.db_path, "HTTP_FETCH": fixture_http})
         self.client = self.app.test_client()
 
     def tearDown(self):
@@ -31,18 +37,11 @@ class CarryOnApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 201, response.json)
         return response.json
 
-    def test_demo_seed_has_expected_remaining_budget_and_estimated_rates(self):
-        demo_app = create_app({"TESTING": True, "DATABASE_PATH": str(Path(self.temp.name) / "demo.db")})
-        client = demo_app.test_client()
-        trip = client.get("/api/trips").json[0]
-        self.assertEqual(trip["id"], "demo-paris")
-        self.assertEqual(trip["localCurrency"], "EUR")
-        self.assertEqual(trip["summary"]["spent"], 1058.0)
-        self.assertEqual(trip["summary"]["remaining"], 642.0)
-        self.assertEqual(trip["summary"]["expenseCount"], 6)
-        rates = client.get("/api/rates").json
-        self.assertTrue(rates["estimated"])
-        self.assertEqual(rates["rates"]["EUR"], 0.92)
+    def test_new_installation_is_empty_and_rates_are_sourced(self):
+        self.assertEqual(self.client.get("/api/trips").json, [])
+        rates = self.client.get("/api/rates").json
+        self.assertEqual(rates["source"], "Frankfurter")
+        self.assertEqual(rates["dates"]["EUR"], "2026-11-06")
 
     def test_trip_plan_survives_restart(self):
         trip = self.create_trip()
@@ -53,7 +52,7 @@ class CarryOnApiTests(unittest.TestCase):
             "overlookedCosts": [{"id": "insurance", "label": "Travel insurance", "estimate": 25, "checked": True}],
         })
         self.assertEqual(response.status_code, 200, response.json)
-        restarted = create_app({"TESTING": True, "DATABASE_PATH": self.db_path, "SEED_DEMO": False})
+        restarted = create_app({"TESTING": True, "DATABASE_PATH": self.db_path, "HTTP_FETCH": fixture_http})
         saved = restarted.test_client().get(f"/api/trips/{trip_id}").json
         self.assertEqual(saved["budget"], 120.0)
         self.assertEqual(saved["categoryBudgets"], {"Food": 70.0, "Transit": 50.0})
@@ -72,7 +71,7 @@ class CarryOnApiTests(unittest.TestCase):
         self.assertEqual(replay.status_code, 200)
         self.assertEqual(replay.json["id"], first.json["id"])
 
-        restarted = create_app({"TESTING": True, "DATABASE_PATH": self.db_path, "SEED_DEMO": False})
+        restarted = create_app({"TESTING": True, "DATABASE_PATH": self.db_path, "HTTP_FETCH": fixture_http})
         saved = restarted.test_client().get(f"/api/trips/{trip_id}").json
         self.assertEqual(saved["summary"]["spent"], 50.0)
         self.assertEqual(saved["summary"]["remaining"], 50.0)

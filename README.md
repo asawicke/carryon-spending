@@ -2,64 +2,68 @@
 
 ## Lo-Fi prototype
 
-This is a working React/Flask progressive web app for the team's priority budget → expense → decision flow. It lets a student create a trip, set a total and category budget, review commonly missed costs, enter or edit an expense in local currency, and see the updated home-currency balance, category breakdown, daily guidance, and a possible-purchase calculation. Trip and expense records live in SQLite. Expense submissions use a client-generated ID so a queued offline retry creates at most one server record.
-
-The sample Paris trip starts at **$1,700 budget, $1,058 spent, $642 remaining**. The exchange rates are fixed **demo estimates**, clearly labeled in the app. Live rates, flight alerts, travel guidance, account login, and a production sync system remain future work.
+A travel budgeting PWA built with React, Flask, and SQLite. Plan a trip, track expenses in local and home currencies, view spending charts, create custom categories, and search flight fares.
 
 ## Run locally
 
-Requirements: **Python 3.10+**, **Node.js 20.19+ or 22.12+**, npm, and Git. SQLite is included with Python. No API keys or external database are needed.
-
-Clone this private repository using a GitHub account with access:
+Requires Python 3.10+, Node.js 20.19+ (20.x) or 22.12+, npm, and Git.
 
 ```sh
 git clone https://github.com/asawicke/carryon-spending.git
 cd carryon-spending
-```
-
-Then run the following from the repository root on macOS or Linux:
-
-```sh
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r backend/requirements.txt
 npm ci --prefix frontend
 npm run build --prefix frontend
-python -m backend.app
+PORT=5050 python -m backend.app
 ```
 
-On Windows PowerShell, create and activate the environment with `py -m venv .venv` and `.\.venv\Scripts\Activate.ps1`, then run the same commands starting with `python -m pip install`.
+Open **http://127.0.0.1:5050/**. Keep the terminal running. New installations start empty; create a trip on **Plan**.
 
-Open **http://127.0.0.1:5000/** in your browser. Flask serves both the built React app and its API. Keep the terminal running; press Ctrl+C to stop it. Later, activate the environment again and run `python -m backend.app` to restart. Rebuild the frontend after changing its source files.
+**Windows PowerShell:** activate with `.\.venv\Scripts\Activate.ps1`, then use the same install/build commands. Set `$env:PORT = '5050'` and run `python -m backend.app`.
 
-If port 5000 is occupied (sometimes by AirPlay Receiver on macOS), use `PORT=5050 python -m backend.app` on macOS/Linux and open **http://127.0.0.1:5050/**. The app must be built before opening the Flask URL; an unbuilt frontend returns a 404.
+**Updating an existing checkout:** run `git pull`, repeat the install/build commands, and restart Flask. Your local database is preserved.
 
-The database is created and seeded automatically on first launch at `backend/data/carryon.db`. Your changes persist on that computer across restarts. This file, installed packages, and generated builds are excluded from Git. To rehearse with a separate database, start with `CARRYON_DB_PATH=/tmp/carryon-rehearsal.db python -m backend.app` on macOS/Linux.
+## Flight search setup
 
-For the PWA cache, visit the app once online. The prototype includes an expense queue for offline retries; full offline behavior still needs browser testing.
+Manual ticket entry works without an API key. To enable fare search:
 
-## Frontend development
+1. [Create an Ignav account](https://ignav.com/signup), review its terms, verify your email, and get your key from the dashboard.
+2. Copy `.env.example` to `.env` **only if `.env` does not already exist**. Enter your key privately as `IGNAV_API_KEY`.
+3. Load the configuration and restart Flask:
 
-Keep Flask running on port 5000. In a second terminal at the repository root, run `npm run dev --prefix frontend` and open the URL Vite prints (usually http://127.0.0.1:5173/). Vite forwards `/api` requests to Flask; edits appear without rebuilding. If you change Flask's port, update the proxy target in `frontend/vite.config.js` too.
+```sh
+set -a
+source .env
+set +a
+PORT=5050 python -m backend.app
+```
 
-## Project structure
+On PowerShell, set `$env:IGNAV_API_KEY` locally before starting Python. Flask reads environment variables; it does not load `.env` automatically. Never commit keys or put them in frontend code or `VITE_` variables.
 
-- `frontend/src/`: React screens, forms, budget calculations, and offline expense queue.
-- `frontend/public/`: PWA manifest, service worker, and icons.
-- `backend/app.py`: Flask API, input validation, currency conversion, and SQLite storage.
-- `backend/tests/`: API behavior tests using temporary databases.
+Open **Plan → Flights · fare search and tickets**. Search one-way or round-trip fares for one adult in economy using airport/city codes such as DTW or PAR. Searches use the US pricing market and display the returned currency. Save an estimate without changing spending, or open seller booking options. Record purchased tickets separately.
 
-Useful API URLs: `/api/health`, `/api/trips`, and `/api/rates`. These return JSON; `/` opens the app.
+[Ignav pricing](https://ignav.com/pricing), checked November 8, 2026: **1,000 one-time free requests**, then **$2 per 1,000 successful requests**. The local `IGNAV_DAILY_LIMIT=20` setting counts attempts across restarts and resets at midnight UTC; it does not guarantee staying within the provider's free allowance. Searches are cached for 15 minutes and booking links for 5 minutes. Fares are estimates; confirm final prices and fees with the seller. Alerts and historical market-price benchmarks remain stretch goals.
+
+Optional AirLabs live-status lookup uses a separate `AIRLABS_API_KEY`; it is not required for fare search. See the [flight integration notes](docs/FLIGHT_API_INTEGRATION.md) for API details, limits, sources, and verification.
+
+## Data and development
+
+- SQLite stores trips, expenses, categories, checklists, tickets, and saved quotes at `backend/data/carryon.db`. Back it up before moving it. `CARRYON_DB_PATH` selects another location. Databases and `.env` are excluded from Git.
+- [Frankfurter](https://frankfurter.dev) provides daily reference exchange rates, cached for six hours. Conversions are estimates and may differ from bank rates or fees. Saved expenses retain their conversion rate.
+- Offline expense entries are queued and synced with stable IDs. Trip creation, plan saves, and flights require the server. This is a local, single-user prototype.
+- Frontend code is in `frontend/src/`; APIs and provider adapters are in `backend/`. For frontend development, run Flask on port 5000 and `npm run dev --prefix frontend` separately; use Vite's printed URL.
 
 ## Verify
 
-- Backend behavior (with the environment activated): `python -m unittest discover -s backend/tests -v`
-- Production frontend build: `npm run build --prefix frontend`
+```sh
+python -m unittest discover -s backend/tests -v
+npm run build --prefix frontend
+```
+
+Tests use temporary databases and isolated fixtures, not production sample data.
 
 ## Project references
 
-- [EECS 497 – Capstone Project folder](https://drive.google.com/drive/folders/130RJwSIgSeLF7ZevDTFqgfarOgmiQ-yF)
-- [Team user requirements](https://docs.google.com/document/d/1JayOina8pale-Gw71MvVIuDWl6Kys1jVBq2v5S1WbWE)
-- [Figma Make lo-fi prototype](https://www.figma.com/make/NUjJLaoI0HzRKz7lWTytJU/Lofi-Prototype-Creation?p=f&t=wAIy1PFGYRGPDWDS-0)
-
-The references may require team access. This code is a local implementation alongside the Figma prototype. Exchange rates are sample estimates; travel guidance, live rates, authentication, and production hosting remain future work.
+[Research and requirements audit](docs/PWA_REFINEMENT_REPORT.md) · [Flight integration](docs/FLIGHT_API_INTEGRATION.md) · [Drive folder](https://drive.google.com/drive/folders/130RJwSIgSeLF7ZevDTFqgfarOgmiQ-yF) · [Requirements](https://docs.google.com/document/d/1JayOina8pale-Gw71MvVIuDWl6Kys1jVBq2v5S1WbWE) · [Figma](https://www.figma.com/make/NUjJLaoI0HzRKz7lWTytJU/Lofi-Prototype-Creation)
