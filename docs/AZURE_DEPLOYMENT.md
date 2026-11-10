@@ -4,12 +4,12 @@ CarryOn uses one **Azure Functions Flex Consumption** app and one **Azure Databa
 
 ## Runtime and data
 
-- React and Flask share one HTTPS origin. `function_app.py` uses Microsoft's WSGI adapter; `host.json` preserves Flask routes. Azure manages the Python worker, so Gunicorn is not the hosted entry point.
+- React and Flask share one HTTPS origin. `function_app.py` uses Microsoft's WSGI adapter; `host.json` preserves Flask routes. Azure runs Python 3.12 and manages the worker, so Gunicorn is not the hosted entry point.
 - The app scales to zero with no always-ready instances. Its maximum-instance cap is two, not two reserved servers.
 - Local development keeps SQLite. Production requires PostgreSQL with `sslmode=verify-full`, verified CA certificates, secure HttpOnly session cookies, trusted-host checks, HTTPS and a Content Security Policy.
 - Cloud data starts empty; no personal local databases or backups are uploaded. Cloud device-trip import is disabled. Accounts own their trips, expenses and custom categories.
 - The database uses PostgreSQL 16, one burstable B1ms instance, 32 GB storage without auto-growth, and seven days of backups. The application login has no superuser, role-creation or database-creation privileges. Azure's default `public` schema requires explicit `USAGE, CREATE` permission for that login.
-- Database firewall rules currently allow the host's listed possible outbound IPs and a temporary deployment-laptop IP. Serverless outbound IPs can change; connectivity must be verified before pilot release.
+- The app uses `vnet-carryon-pilot/functions` and a private PostgreSQL endpoint at `10.77.0.36`, with private DNS. This avoids changing serverless egress IPs. Public database access will be disabled after live verification; the temporary laptop/firewall rules are not required for the hosted app.
 - Capped Azure Monitor startup logs are configured separately from user records. Never log passwords, provider keys, tokens or request bodies.
 
 ## Private app settings
