@@ -1,10 +1,21 @@
 """Create an Azure source ZIP from an explicit allowlist, excluding local data/secrets."""
 import argparse
 import json
+import stat
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def write_public_file(archive, name, content):
+    # writestr defaults to 0600. Azure builds and runs as different users, so
+    # deployed source/config must remain readable by the runtime user.
+    entry = ZipInfo(name)
+    entry.create_system = 3
+    entry.external_attr = (stat.S_IFREG | 0o644) << 16
+    entry.compress_type = ZIP_DEFLATED
+    archive.writestr(entry, content)
 
 
 def package(destination, frontend_dist=None):
@@ -22,8 +33,8 @@ def package(destination, frontend_dist=None):
         for source, name in sorted(files, key=lambda pair: pair[1]):
             if '.env' in Path(name).parts or any(part in ('data', 'tests', '__pycache__', '.git') for part in Path(name).parts):
                 raise RuntimeError('Unexpected private file in deployment allowlist.')
-            archive.writestr(name, source.read_bytes())
-        archive.writestr('deployment-manifest.json', json.dumps({'format': 1, 'files': [name for _, name in files]}, indent=2))
+            write_public_file(archive, name, source.read_bytes())
+        write_public_file(archive, 'deployment-manifest.json', json.dumps({'format': 1, 'files': [name for _, name in files]}, indent=2))
     return destination
 
 

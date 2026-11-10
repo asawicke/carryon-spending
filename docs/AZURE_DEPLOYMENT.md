@@ -5,7 +5,7 @@ CarryOn uses one **Azure Functions Flex Consumption** app and one **Azure Databa
 ## Runtime and data
 
 - React and Flask share one HTTPS origin. `function_app.py` uses Microsoft's WSGI adapter; `host.json` preserves Flask routes. Azure manages the Python worker, so Gunicorn is not the hosted entry point.
-- The app scales to zero with no always-ready instances. Its maximum-instance setting is Azure's minimum cap of 40, not 40 reserved servers.
+- The app scales to zero with no always-ready instances. Its maximum-instance cap is two, not two reserved servers.
 - Local development keeps SQLite. Production requires PostgreSQL with `sslmode=verify-full`, verified CA certificates, secure HttpOnly session cookies, trusted-host checks, HTTPS and a Content Security Policy.
 - Cloud data starts empty; no personal local databases or backups are uploaded. Cloud device-trip import is disabled. Accounts own their trips, expenses and custom categories.
 - The database uses PostgreSQL 16, one burstable B1ms instance, 32 GB storage without auto-growth, and seven days of backups. The application login has no superuser, role-creation or database-creation privileges. Azure's default `public` schema requires explicit `USAGE, CREATE` permission for that login.
@@ -27,6 +27,10 @@ Set these in the Azure function app configuration, never the frontend or Git:
 | `GOOGLE_CLIENT_ID` | Optional web client ID after Google setup |
 
 The function runtime manages storage settings. Flex deployments use `--build-remote true`; do not add App Service/Oryx build settings intended for other hosting plans.
+
+## Archive permissions
+
+Package entries must use `0644`. Python ZIP defaults (`0600`) caused Azure to reject `host.json` because the build and runtime use different users. The packager normalizes non-secret files and a regression check verifies every entry. Private configuration is supplied separately through Azure settings.
 
 ## Verify and release
 

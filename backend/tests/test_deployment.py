@@ -70,6 +70,8 @@ class DeploymentTests(unittest.TestCase):
             names=bundle.namelist()
             self.assertIn('backend/database.py',names); self.assertIn('frontend/dist/index.html',names)
             self.assertFalse(any('.env' in name or '/data/' in name or '/tests/' in name or '.venv' in name for name in names))
+            for entry in bundle.infolist():
+                self.assertEqual((entry.external_attr >> 16) & 0o777, 0o644, entry.filename)
 
 
 if __name__ == '__main__':
