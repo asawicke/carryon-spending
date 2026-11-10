@@ -1,10 +1,12 @@
 # Google sign-in setup
 
-Email/password sign-in works immediately. Google sign-in is implemented but remains unavailable until you configure a web client ID. A real Google login has not been verified without that ID and a consenting test user.
+Email/password sign-in works immediately. The hosted pilot now has a Google web client configured in project `carryon-spending`; a real Google login still needs verification by a consenting user. The initial hosted check rendered the official Google button and passed the server challenge/cookie checks, but Google returned an origin-not-allowed message despite the exact origin being saved. Google’s console warns that new settings may take five minutes to a few hours to apply. Retry after propagation; do not mark real sign-in verified until a consented login succeeds.
+
+Authorized pilot origins are `https://carryon-spending-asawicke.azurewebsites.net`, `http://127.0.0.1:5050`, and `http://localhost:5050`. The client uses the External testing audience and basic identity only. Google documents an exception to the test-user allowlist for apps requesting only `openid`, `email`, and `profile`; university administrator restrictions can still apply. No sensitive Google API access is requested.
 
 ## Enable it locally
 
-1. Open [Google Auth Platform](https://console.developers.google.com/auth/clients), select or create your team's project, and configure the app's branding and audience. For a test app, include the accounts that will test it. A university-only internal audience requires an eligible university-managed project; otherwise choose the appropriate external audience.
+1. Open [Google Auth Platform](https://console.developers.google.com/auth/clients), select or create your team's project, and configure the app's branding and audience. For apps requesting more than basic identity, configure the appropriate test-user allowlist. A university-only internal audience requires an eligible university-managed project; otherwise choose the appropriate external audience.
 2. Create an OAuth client with application type **Web application**. Add the exact origins you use under **Authorized JavaScript origins**:
    - `http://localhost:5050`
    - `http://127.0.0.1:5050`
@@ -28,7 +30,7 @@ The official Google button replaces the disabled setup placeholder. Only identit
 - The server creates a 30-minute random challenge bound to an HttpOnly, SameSite cookie and database record. The signed token's nonce must match; successful challenges are consumed atomically to prevent reuse.
 - `google-auth` checks the Google signature, issuer, intended client and expiration. The adapter also requires the nonce, subject and verified email, uses an eight-second transport timeout, and reuses the local sign-in attempt limit.
 - The stable Google subject maps to a local account with isolated trips and the existing revocable session cookie. Provider credentials are neither logged nor stored. A matching email **never automatically merges accounts**: an existing password account must continue using its password; linking is not implemented.
-- No cloud synchronization, account recovery or email verification for password-created accounts is included. Reloading the app while the server is unavailable shows the connection message on the login page; an already open workspace can still queue expenses offline.
+- The hosted PostgreSQL database keeps the same account’s trips available across browsers. Local SQLite data is separate. Account recovery and email verification for password-created accounts are not included. Reloading the app while the server is unavailable shows the connection message on the login page; an already open workspace can still queue expenses offline.
 
 ## Verification
 
@@ -41,3 +43,4 @@ After setup, manually verify: create a Google account session; reload and confir
 - [Google Identity Services setup](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid)
 - [Server-side ID-token verification and existing account handling](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token)
 - [JavaScript initialization, nonce and button reference](https://developers.google.com/identity/gsi/web/reference/js-reference)
+- [Google testing audiences and identity-only exception](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)

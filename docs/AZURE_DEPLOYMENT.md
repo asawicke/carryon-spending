@@ -9,7 +9,7 @@ CarryOn uses one **Azure Functions Flex Consumption** app and one **Azure Databa
 - Local development keeps SQLite. Production requires PostgreSQL with `sslmode=verify-full`, verified CA certificates, secure HttpOnly session cookies, trusted-host checks, HTTPS and a Content Security Policy.
 - Cloud data starts empty; no personal local databases or backups are uploaded. Cloud device-trip import is disabled. Accounts own their trips, expenses and custom categories.
 - The database uses PostgreSQL 16, one burstable B1ms instance, 32 GB storage without auto-growth, and seven days of backups. The application login has no superuser, role-creation or database-creation privileges. Azure's default `public` schema requires explicit `USAGE, CREATE` permission for that login.
-- The app uses `vnet-carryon-pilot/functions` and a private PostgreSQL endpoint at `10.77.0.36`, with private DNS. This avoids changing serverless egress IPs. Public database access will be disabled after live verification; the temporary laptop/firewall rules are not required for the hosted app.
+- The app uses `vnet-carryon-pilot/functions` and a private PostgreSQL endpoint at `10.77.0.36`, with private DNS. This avoids changing serverless egress IPs. Public database access is disabled and the live app was checked afterward; the temporary laptop/firewall rules are not required for the hosted app.
 - Capped Azure Monitor startup logs are configured separately from user records. Never log passwords, provider keys, tokens or request bodies.
 
 ## Cookie compatibility
@@ -28,7 +28,7 @@ Set these in the Azure function app configuration, never the frontend or Git:
 | `IGNAV_API_KEY` | Private flight-provider key |
 | `IGNAV_DAILY_LIMIT` | `10`, shared across users |
 | `FLIGHT_PROVIDER` | `ignav` |
-| `GOOGLE_CLIENT_ID` | Optional web client ID after Google setup |
+| `GOOGLE_CLIENT_ID` | Configured public web client ID from project `carryon-spending`; no client secret required |
 
 The function runtime manages storage settings. Flex deployments use `--build-remote true`; do not add App Service/Oryx build settings intended for other hosting plans.
 
@@ -56,7 +56,13 @@ After release, check `/api/health`, create a test account/trip/expense, verify a
 
 Use only the personal **Azure for Students** subscription; spending protection was confirmed **On**. No payment card or pay-as-you-go upgrade was added. PostgreSQL, storage and logs can consume the student credit even with little traffic. Credit exhaustion/expiration can suspend service; review usage during the three-month pilot.
 
-**Live verification is pending.** The host exists at `https://carryon-spending-asawicke.azurewebsites.net`, but a provisioned hostname is not proof of a working app. Google sign-in code exists; its client configuration and a real login are also pending.
+**Live app verified:** https://carryon-spending-asawicke.azurewebsites.net/ . HTTPS, health checks, email registration, secure cookies, trip/expense writes, account isolation, cross-origin write rejection and persistence after restart passed. GitHub verification passed all 41 backend tests including PostgreSQL, frontend tests, production build and deployment packaging.
+
+Google’s web client is created and configured on Azure and in the private local `.env`. The official button renders and the server challenge issues a secure cookie. A real login remains unverified: Google currently rejects the exact saved origin; the new settings may still be propagating; the console warns this can take five minutes to a few hours. Email login remains usable.
+
+Temporary startup logging has been restored to Warning. The monitoring workspace keeps 30 days of logs with a 0.1 GB daily ingestion cap. This is an ingestion cap, not a complete Azure budget guarantee.
+
+The original PostgreSQL ARM template is for bootstrap provisioning; do not reapply its public-network setting to the verified private deployment. No automated infrastructure updates are configured.
 
 ## Official references
 

@@ -1,15 +1,21 @@
 # CarryOn Spending — EECS 497 capstone
 
-## Lo-Fi prototype
+## Live pilot
 
-A travel budgeting PWA built with React, Flask, and SQLite. Plan a trip, track expenses in local and home currencies, view spending charts, create custom categories, and search flight fares. Includes light/dark themes, local accounts, multi-destination trips, and editable budget suggestions.
+Open **https://carryon-spending-asawicke.azurewebsites.net/** and create an email/password account. Azure hosts Flask and React together over HTTPS with a persistent PostgreSQL database. Google sign-in is configured; the first real login is pending because Google is rejecting the new authorized origin, which may still be propagating. Email sign-in is verified.
+
+The deployed code is on `codex/azure-deployment`; releases are currently manual, with GitHub verification before publishing. [Deployment and operations](docs/AZURE_DEPLOYMENT.md).
+
+## App
+
+A travel budgeting PWA built with React and Flask, using SQLite locally and PostgreSQL online. Plan a trip, track expenses in local and home currencies, view spending charts, create custom categories, and search flight fares. Includes light/dark themes, local accounts, multi-destination trips, and editable budget suggestions.
 
 ## Run locally
 
 Requires Python 3.10+, Node.js 20.19+ (20.x) or 22.12+, npm, and Git.
 
 ```sh
-git clone https://github.com/asawicke/carryon-spending.git
+git clone --branch codex/azure-deployment https://github.com/asawicke/carryon-spending.git
 cd carryon-spending
 python3 -m venv .venv
 source .venv/bin/activate
@@ -19,7 +25,7 @@ npm run build --prefix frontend
 PORT=5050 python -m backend.app
 ```
 
-Open **http://127.0.0.1:5050/**. Keep the terminal running. New installations start empty; create a trip on **Plan**.
+Open **http://127.0.0.1:5050/**. Keep the terminal running. Sign in or create an account, then create a trip on **Plan**. Local and hosted accounts/data are separate.
 
 **Windows PowerShell:** activate with `.\.venv\Scripts\Activate.ps1`, then use the same install/build commands. Set `$env:PORT = '5050'` and run `python -m backend.app`.
 
@@ -47,9 +53,9 @@ Optional AirLabs live-status lookup uses a separate `AIRLABS_API_KEY`; it is not
 
 ## Data and development
 
-- SQLite stores trips, expenses, categories, checklists, tickets, and saved quotes at `backend/data/carryon.db`. Back it up before moving it. `CARRYON_DB_PATH` selects another location. Databases and `.env` are excluded from Git.
+- Local SQLite stores trips, expenses, categories, checklists, tickets, and saved quotes at `backend/data/carryon.db`. Back it up before moving it. `CARRYON_DB_PATH` selects another location. Databases and `.env` are excluded from Git.
 - [Frankfurter](https://frankfurter.dev) provides daily reference exchange rates, cached for six hours. Conversions are estimates and may differ from bank rates or fees. Saved expenses retain their conversion rate.
-- Sign in or create an account on the first screen. Accounts separate trips on this local server; Settings offers an explicit move of earlier device trips. An open workspace can queue expenses offline, but signing in or reloading requires the server. Cloud sync, email verification and password reset are not included.
+- Sign in or create an account on the first screen. Accounts separate trips on this local server; Settings offers an explicit move of earlier device trips. An open workspace can queue expenses offline, but signing in or reloading requires the server. The hosted version saves account data across browsers; your local server keeps separate data. Email verification and password reset are not included.
 - Frontend code is in `frontend/src/`; APIs and provider adapters are in `backend/`. For frontend development, run Flask on port 5000 and `npm run dev --prefix frontend` separately; use Vite's printed URL.
 
 ## Themes and planning
