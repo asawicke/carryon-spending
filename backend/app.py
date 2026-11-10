@@ -19,6 +19,14 @@ from .providers import SUPPORTED_CURRENCIES, rates as provider_rates, ProviderEr
 from .categories import canonical_category, register_categories, PREPARATION
 from .flights import register_flights
 from .fare_routes import register_fares
+from .configuration import load_local_environment
+from .catalog import catalog_payload
+from .accounts import migrate_accounts, register_accounts, owner_key
+from .itineraries import normalize_itinerary, destination_context
+from .planning import register_planning
+from .database import connect_database, table_columns, is_postgres, IntegrityErrors
+from .deployment import configure_deployment
+from werkzeug.security import generate_password_hash
 
 
 BASE_CURRENCY = "USD"
@@ -27,7 +35,7 @@ DEFAULT_OVERLOOKED_COSTS = [
     for key, label in (("passport", "Passport renewal"), ("visa", "Visa or entry fees"),
                        ("insurance", "Travel insurance"), ("airport", "Airport transfer"),
                        ("sim", "SIM / eSIM"), ("fees", "Foreign transaction and ATM fees"),
-                       ("baggage", "Baggage fees"), ("buffer", "Emergency cushion"))
+                       ("baggage", "Baggage fees"))
 ]
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 CENT = Decimal("0.01")
@@ -98,8 +106,7 @@ def from_cents(value: int) -> float:
 
 def currency_field(value: object, field: str = "currency") -> str:
     if not isinstance(value, str) or value.upper() not in SUPPORTED_CURRENCIES:
-        supported = ", ".join(SUPPORTED_CURRENCIES)
-        raise ApiError(f"{field} must be one of: {supported}.")
+        raise ApiError(f"{field} is not supported. Choose a currency from the list.")
     return value.upper()
 
 
@@ -151,18 +158,14 @@ def require_allowed(body: dict, allowed: set[str]) -> None:
         raise ApiError("At least one field is required.")
 
 
-def connect_database(path: str) -> sqlite3.Connection:
-    connection = sqlite3.connect(path, timeout=10)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
-    connection.execute("PRAGMA busy_timeout = 10000")
-    return connection
-
-
 def init_database(path: str) -> None:
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    if not is_postgres(path):
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
     db = connect_database(path)
     try:
+        if is_postgres(path):
+            db.execute('BEGIN')
+            db.execute('SELECT pg_advisory_xact_lock(49720261111)')
         db.executescript(
             """
             CREATE TABLE IF NOT EXISTS trips (
@@ -171,7 +174,7 @@ def init_database(path: str) -> None:
                 destination TEXT NOT NULL,
                 start_date TEXT,
                 end_date TEXT,
-                budget_cents INTEGER NOT NULL CHECK (budget_cents >= 0),
+                budget_cents BIGINT NOT NULL CHECK (budget_cents >= 0),
                 currency TEXT NOT NULL,
                 local_currency TEXT NOT NULL,
                 category_budgets_json TEXT NOT NULL,
@@ -183,10 +186,10 @@ def init_database(path: str) -> None:
                 id TEXT PRIMARY KEY,
                 client_id TEXT NOT NULL,
                 trip_id TEXT NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-                amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+                amount_cents BIGINT NOT NULL CHECK (amount_cents > 0),
                 currency TEXT NOT NULL,
-                amount_base_cents INTEGER NOT NULL CHECK (amount_base_cents >= 0),
-                rate REAL NOT NULL,
+                amount_base_cents BIGINT NOT NULL CHECK (amount_base_cents >= 0),
+                rate DOUBLE PRECISION NOT NULL,
                 category TEXT NOT NULL,
                 note TEXT NOT NULL,
                 date TEXT NOT NULL,
@@ -198,15 +201,22 @@ def init_database(path: str) -> None:
             CREATE INDEX IF NOT EXISTS expenses_trip_date ON expenses (trip_id, date DESC, created_at DESC);
             """
         )
-        columns = {row["name"] for row in db.execute("PRAGMA table_info(trips)")}
+        columns = table_columns(db, 'trips')
         if "local_currency" not in columns:
             db.execute("ALTER TABLE trips ADD COLUMN local_currency TEXT NOT NULL DEFAULT 'USD'")
         if "preparation_json" not in columns:
             db.execute("ALTER TABLE trips ADD COLUMN preparation_json TEXT NOT NULL DEFAULT '{}'")
+        if "destinations_json" not in columns:
+            db.execute("ALTER TABLE trips ADD COLUMN destinations_json TEXT NOT NULL DEFAULT '[]'")
+        if "daily_categories_json" not in columns:
+            db.execute("ALTER TABLE trips ADD COLUMN daily_categories_json TEXT NOT NULL DEFAULT '[\"Food\",\"Activities\",\"Shopping\",\"Other\"]'")
+        expense_columns = table_columns(db, 'expenses')
+        if "destination_id" not in expense_columns:
+            db.execute("ALTER TABLE expenses ADD COLUMN destination_id TEXT NOT NULL DEFAULT ''")
         db.executescript("""
             CREATE TABLE IF NOT EXISTS categories (name_key TEXT PRIMARY KEY, name TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS provider_cache (
-                key TEXT PRIMARY KEY, data TEXT NOT NULL, created_at REAL NOT NULL, expires_at REAL NOT NULL
+                key TEXT PRIMARY KEY, data TEXT NOT NULL, created_at DOUBLE PRECISION NOT NULL, expires_at DOUBLE PRECISION NOT NULL
             );
             CREATE TABLE IF NOT EXISTS provider_usage (month TEXT PRIMARY KEY, count INTEGER NOT NULL);
             CREATE TABLE IF NOT EXISTS flight_api_usage (period TEXT PRIMARY KEY, count INTEGER NOT NULL);
@@ -222,8 +232,9 @@ def init_database(path: str) -> None:
             );
         """)
         # Preserve the old prototype's sample trip in storage, but never serve it.
-        for row in db.execute("SELECT DISTINCT category FROM expenses WHERE trip_id != 'demo-paris'"):
-            canonical_category(db, row["category"])
+        migrate_accounts(db)
+        for row in db.execute("SELECT DISTINCT e.category,t.owner_key FROM expenses e JOIN trips t ON t.id=e.trip_id WHERE t.id!='demo-paris'"):
+            canonical_category(db, row["category"], row["owner_key"], activate=False)
         db.commit()
     finally:
         db.close()
@@ -246,7 +257,7 @@ def get_db() -> sqlite3.Connection:
 
 
 def trip_row(trip_id: str) -> sqlite3.Row:
-    row = get_db().execute("SELECT * FROM trips WHERE id = ?", (trip_id,)).fetchone()
+    row = get_db().execute("SELECT * FROM trips WHERE id = ? AND owner_key=?", (trip_id,owner_key())).fetchone()
     if row is None or row["id"] == "demo-paris":
         raise ApiError("Trip not found.", status=404, code="not_found")
     return row
@@ -257,6 +268,7 @@ def expense_row(expense_id: str, *, include_deleted: bool = False) -> sqlite3.Ro
     row = get_db().execute(f"SELECT * FROM expenses WHERE id = ?{clause}", (expense_id,)).fetchone()
     if row is None or row["trip_id"] == "demo-paris":
         raise ApiError("Expense not found.", status=404, code="not_found")
+    trip_row(row["trip_id"])
     return row
 
 
@@ -266,6 +278,7 @@ def expense_dict(row: sqlite3.Row) -> dict:
         "amount": from_cents(row["amount_cents"]), "currency": row["currency"],
         "amountBase": from_cents(row["amount_base_cents"]), "rate": round(row["rate"], 8),
         "category": row["category"], "note": row["note"], "date": row["date"],
+        "destinationId": row["destination_id"],
         "createdAt": row["created_at"], "updatedAt": row["updated_at"],
     }
     if row["deleted_at"]:
@@ -296,6 +309,8 @@ def trip_dict(row: sqlite3.Row) -> dict:
         "categoryBudgets": json.loads(row["category_budgets_json"]),
         "overlookedCosts": json.loads(row["overlooked_costs_json"]),
         "preparation": json.loads(row["preparation_json"]),
+        "destinations": destination_context(json.loads(row["destinations_json"])),
+        "dailyCategories": json.loads(row["daily_categories_json"]),
         "summary": {
             "spent": from_cents(spent), "remaining": from_cents(budget - spent),
             "percentUsed": round(spent * 100 / budget, 1) if budget else 0,
@@ -307,7 +322,7 @@ def trip_dict(row: sqlite3.Row) -> dict:
 
 
 def normalized_trip_body(body: dict, *, existing: sqlite3.Row | None = None) -> dict:
-    allowed = {"name", "destination", "startDate", "endDate", "budget", "currency", "localCurrency", "categoryBudgets", "overlookedCosts", "preparation"}
+    allowed = {"name", "destination", "startDate", "endDate", "budget", "currency", "localCurrency", "categoryBudgets", "overlookedCosts", "preparation", "destinations", "dailyCategories", "recordPast"}
     require_allowed(body, allowed)
     name = text_field(body.get("name", existing["name"] if existing else None), "name", maximum=100)
     destination = text_field(body.get("destination", existing["destination"] if existing else None), "destination", maximum=100)
@@ -315,6 +330,10 @@ def normalized_trip_body(body: dict, *, existing: sqlite3.Row | None = None) -> 
     end = parse_date(body.get("endDate", existing["end_date"] if existing else None), "endDate", optional=True)
     if start and end and end < start:
         raise ApiError("endDate cannot be before startDate.")
+    if "recordPast" in body and not isinstance(body["recordPast"], bool):
+        raise ApiError("Record past trip must be true or false.")
+    if start and start < date.today().isoformat() and not body.get("recordPast") and (not existing or start != existing["start_date"]):
+        raise ApiError("Choose today or a future start date, or explicitly choose Record a past trip.")
     raw_budget = body.get("budget", from_cents(existing["budget_cents"]) if existing else None)
     budget = decimal_money(raw_budget, "budget", allow_zero=True)
     currency = currency_field(body.get("currency", existing["currency"] if existing else "USD"))
@@ -330,6 +349,7 @@ def normalized_trip_body(body: dict, *, existing: sqlite3.Row | None = None) -> 
                                                for key, value in preparation.items()):
         raise ApiError("Preparation must contain the supported checklist items with true or false values.")
     return {
+        **normalize_itinerary(body, existing, start, end, globals()),
         "preparation_json": json.dumps(preparation),
         "name": name, "destination": destination, "start_date": start, "end_date": end,
         "budget_cents": to_cents(budget), "currency": currency, "local_currency": local_currency,
@@ -339,7 +359,7 @@ def normalized_trip_body(body: dict, *, existing: sqlite3.Row | None = None) -> 
 
 
 def normalized_expense_body(body: dict, *, existing: sqlite3.Row | None = None) -> dict:
-    allowed = {"amount", "currency", "category", "note", "date"}
+    allowed = {"amount", "currency", "category", "note", "date", "destinationId"}
     if existing is None:
         allowed.add("clientId")
     require_allowed(body, allowed)
@@ -353,27 +373,51 @@ def normalized_expense_body(body: dict, *, existing: sqlite3.Row | None = None) 
     note = text_field(body.get("note", existing["note"] if existing else ""), "note", maximum=200, allow_empty=True)
     expense_date = parse_date(body.get("date", existing["date"] if existing else date.today().isoformat()), "date")
     return {"client_id": client_id, "amount_cents": to_cents(amount), "currency": currency,
-            "category": category, "note": note, "date": expense_date}
+            "category": category, "note": note, "date": expense_date,
+            "destination_id": text_field(body.get("destinationId", existing["destination_id"] if existing else ""), "Destination", maximum=100, allow_empty=True)}
+
+
+def validate_expense_destination(fields, trip):
+    if fields["destination_id"] and fields["destination_id"] not in {row["id"] for row in json.loads(trip["destinations_json"])}:
+        raise ApiError("Choose a destination from this trip.")
 
 
 def create_app(config: dict | None = None) -> Flask:
+    if not (config or {}).get("TESTING"):
+        load_local_environment()
     app = Flask(__name__, static_folder=None)
     default_db = Path(__file__).resolve().parent / "data" / "carryon.db"
     app.config.update(
-        DATABASE_PATH=os.environ.get("CARRYON_DB_PATH", str(default_db)),
+        DATABASE_PATH=os.environ.get("DATABASE_URL") or os.environ.get("CARRYON_DB_PATH", str(default_db)),
         AIRLABS_API_KEY=os.environ.get("AIRLABS_API_KEY", ""),
         AIRLABS_MONTHLY_LIMIT=int(os.environ.get("AIRLABS_MONTHLY_LIMIT", "900")),
         IGNAV_API_KEY=os.environ.get("IGNAV_API_KEY", ""),
         IGNAV_DAILY_LIMIT=int(os.environ.get("IGNAV_DAILY_LIMIT", "20")),
         FLIGHT_PROVIDER=os.environ.get("FLIGHT_PROVIDER", "ignav"),
         FRONTEND_DIST=str(Path(__file__).resolve().parent.parent / "frontend" / "dist"),
+        COOKIE_SECURE=os.environ.get("COOKIE_SECURE", "false").lower() == "true",
+        GOOGLE_CLIENT_ID=os.environ.get("GOOGLE_CLIENT_ID", ""),
+        DUMMY_PASSWORD_HASH=generate_password_hash("not-a-real-account-password"),
+        MAX_CONTENT_LENGTH=65536,
     )
     if config:
         app.config.update(config)
+    configure_deployment(app)
     init_database(app.config["DATABASE_PATH"])
+    register_accounts(app, globals())
     register_categories(app, globals())
     register_flights(app, globals())
     register_fares(app, globals())
+    register_planning(app, globals())
+
+    @app.after_request
+    def response_policy(response):
+        if request.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "same-origin"
+        return response
 
     @app.before_request
     def attach_db_path() -> None:
@@ -404,7 +448,20 @@ def create_app(config: dict | None = None) -> Flask:
 
     @app.get("/api/health")
     def health():
+        try:
+            get_db().execute('SELECT 1').fetchone()
+        except Exception:
+            return jsonify({'status': 'unavailable'}), 503
         return jsonify({"status": "ok"})
+
+    @app.get("/api/catalog")
+    def catalog():
+        return catalog_payload()
+
+    @app.get("/api/services")
+    def services():
+        return {"fareSearch": bool(app.config.get("IGNAV_API_KEY")), "flightStatus": bool(app.config.get("AIRLABS_API_KEY")),
+                "message": "Fare search is ready." if app.config.get("IGNAV_API_KEY") else "Set IGNAV_API_KEY in the server's .env file and restart. Manual entry is available."}
 
     @app.get("/api/rates")
     def rates():
@@ -412,7 +469,7 @@ def create_app(config: dict | None = None) -> Flask:
 
     @app.get("/api/trips")
     def list_trips():
-        rows = get_db().execute("SELECT * FROM trips WHERE id != 'demo-paris' ORDER BY created_at DESC, id").fetchall()
+        rows = get_db().execute("SELECT * FROM trips WHERE id != 'demo-paris' AND owner_key=? ORDER BY created_at DESC, id", (owner_key(),)).fetchall()
         return jsonify([trip_dict(row) for row in rows])
 
     @app.post("/api/trips")
@@ -424,10 +481,10 @@ def create_app(config: dict | None = None) -> Flask:
         db.execute(
             """INSERT INTO trips
                (id, name, destination, start_date, end_date, budget_cents, currency, local_currency,
-                category_budgets_json, overlooked_costs_json, preparation_json, created_at, updated_at)
+                category_budgets_json, overlooked_costs_json, preparation_json, created_at, updated_at, destinations_json, daily_categories_json, owner_key)
                VALUES (:id, :name, :destination, :start_date, :end_date, :budget_cents, :currency, :local_currency,
-                       :category_budgets_json, :overlooked_costs_json, :preparation_json, :created_at, :updated_at)""",
-            {"id": trip_id, **fields, "created_at": timestamp, "updated_at": timestamp},
+                       :category_budgets_json, :overlooked_costs_json, :preparation_json, :created_at, :updated_at, :destinations_json, :daily_categories_json, :owner_key)""",
+            {"id": trip_id, **fields, "created_at": timestamp, "updated_at": timestamp, "owner_key":owner_key()},
         )
         db.commit()
         return jsonify(trip_dict(trip_row(trip_id))), 201
@@ -446,7 +503,8 @@ def create_app(config: dict | None = None) -> Flask:
                end_date=:end_date, budget_cents=:budget_cents, currency=:currency,
                local_currency=:local_currency,
                category_budgets_json=:category_budgets_json,
-               overlooked_costs_json=:overlooked_costs_json, preparation_json=:preparation_json, updated_at=:updated_at WHERE id=:id""",
+               overlooked_costs_json=:overlooked_costs_json, preparation_json=:preparation_json,
+               destinations_json=:destinations_json, daily_categories_json=:daily_categories_json, updated_at=:updated_at WHERE id=:id""",
             {"id": trip_id, **fields, "updated_at": now_iso()},
         )
         db.commit()
@@ -466,6 +524,7 @@ def create_app(config: dict | None = None) -> Flask:
     def create_expense(trip_id: str):
         trip = trip_row(trip_id)
         fields = normalized_expense_body(body_object())
+        validate_expense_destination(fields, trip)
         db = get_db()
         # The unique (trip_id, client_id) key survives soft deletion, so replaying
         # an offline write cannot increase the balance a second time.
@@ -484,14 +543,14 @@ def create_app(config: dict | None = None) -> Flask:
             db.execute(
                 """INSERT INTO expenses
                    (id, client_id, trip_id, amount_cents, currency, amount_base_cents, rate,
-                    category, note, date, created_at, updated_at)
+                    category, note, date, created_at, updated_at, destination_id)
                    VALUES (:id, :client_id, :trip_id, :amount_cents, :currency, :amount_base_cents,
-                           :rate, :category, :note, :date, :created_at, :updated_at)""",
+                           :rate, :category, :note, :date, :created_at, :updated_at, :destination_id)""",
                 {"id": expense_id, "trip_id": trip_id, **fields, "amount_base_cents": amount_base,
                  "rate": float(rate), "created_at": timestamp, "updated_at": timestamp},
             )
             db.commit()
-        except sqlite3.IntegrityError:
+        except IntegrityErrors:
             db.rollback()
             prior = db.execute(
                 "SELECT * FROM expenses WHERE trip_id = ? AND client_id = ?",
@@ -507,14 +566,15 @@ def create_app(config: dict | None = None) -> Flask:
         current = expense_row(expense_id)
         fields = normalized_expense_body(body_object(), existing=current)
         trip = trip_row(current["trip_id"])
+        validate_expense_destination(fields, trip)
         rate = Decimal(str(current["rate"])) if fields["currency"] == current["currency"] else conversion_rate(fields["currency"], trip["currency"])
-        fields["category"] = canonical_category(get_db(), fields["category"])
+        fields["category"] = canonical_category(get_db(), fields["category"], activate=fields["category"] != current["category"])
         amount_base = to_cents(Decimal(fields["amount_cents"]) / 100 * rate)
         db = get_db()
         db.execute(
             """UPDATE expenses SET amount_cents=:amount_cents, currency=:currency,
                amount_base_cents=:amount_base_cents, rate=:rate, category=:category,
-               note=:note, date=:date, updated_at=:updated_at WHERE id=:id""",
+               note=:note, date=:date, destination_id=:destination_id, updated_at=:updated_at WHERE id=:id""",
             {"id": expense_id, **fields, "amount_base_cents": amount_base,
              "rate": float(rate), "updated_at": now_iso()},
         )

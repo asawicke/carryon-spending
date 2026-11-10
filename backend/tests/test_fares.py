@@ -29,12 +29,12 @@ class FareTests(unittest.TestCase):
         def transport(endpoint, payload, key):
             self.calls.append((endpoint, copy.deepcopy(payload)))
             return copy.deepcopy(self.response)
-        self.config = {"TESTING": True, "DATABASE_PATH": self.db_path,
+        self.config = {"TESTING": True, "ALLOW_LEGACY_DEVICE_ACCESS": True, "DATABASE_PATH": self.db_path,
                        "IGNAV_API_KEY": "fixture-secret", "IGNAV_HTTP": transport}
         self.app = create_app(self.config)
         self.client = self.app.test_client()
         self.trip = self.client.post("/api/trips", json={"name": "QA", "destination": "London",
-            "budget": 1000, "currency": "USD", "localCurrency": "GBP", "startDate": "2027-01-08", "endDate": "2027-01-15"}).json
+            "budget": 1000, "currency": "USD", "localCurrency": "GBP", "recordPast": True, "startDate": "2027-01-08", "endDate": "2027-01-15"}).json
         self.base = "/api/trips/" + self.trip["id"]
         self.query = {"origin": "JFK", "destination": "LHR", "departureDate": (date.today() + timedelta(days=30)).isoformat()}
 

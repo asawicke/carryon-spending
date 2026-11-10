@@ -1,12 +1,14 @@
 import React from 'react';
 import { localDate, money, timing, byCategory, PREPARATION } from '../lib';
+import { dailyBudget } from '../dailyBudget';
 export function DailySpending({ trip, expenses }) {
-  const time = timing(trip), spent = expenses.filter((e) => e.date === localDate()).reduce((sum, e) => sum + Number(e.amountBase), 0);
-  const target = trip.budget / time.total, left = target - spent;
+  const guidance = dailyBudget(trip, expenses), time = guidance.time, spent = guidance.spentToday;
+  const target = guidance.target, left = guidance.leftToday;
   return <section aria-labelledby="daily-heading"><div className="section-heading"><h2 id="daily-heading">Daily spending</h2></div>
     <div className="daily-grid"><div className="metric-card"><span className="eyebrow">Spent today</span><strong>{money(spent, trip.currency)}</strong><small>{localDate()} · {trip.currency}</small></div>
-      <div className="metric-card"><span className="eyebrow">Daily budget</span><strong>{money(target, trip.currency)}</strong><small>Total budget ÷ {time.total} trip days</small></div></div>
-    {time.active ? <p className={'pace-note ' + (left < 0 ? 'over' : '')}>{left < 0 ? 'Over today’s target by ' + money(-left, trip.currency) : money(left, trip.currency) + ' left against today’s target'}. Prepaid flights and lodging are included, so use this as a guide.</p> : <p className="field-help">{time.phase}. Daily pace applies during your trip; expenses entered today are still shown.</p>}
+      <div className="metric-card"><span className="eyebrow">{time.active ? 'Today’s daily target' : 'Suggested daily target'}</span><strong>{target === null ? 'Set on Plan' : money(target, trip.currency)}</strong><small>Daily categories only · fixed costs and reserve excluded</small></div></div>
+    {time.active && target !== null ? <p className={'pace-note ' + (left < 0 ? 'over' : '')}>{left < 0 ? 'Over today’s target by ' + money(-left, trip.currency) : money(left, trip.currency) + ' left for daily spending today'}. {money(Math.max(0,guidance.remaining), trip.currency)} remains for daily categories.</p> : <p className="field-help">{time.phase}. {guidance.planned > 0 ? 'Daily guidance starts when your trip begins.' : 'Use Help me split my budget on Plan to set aside fixed costs and daily spending.'}</p>}
+    {guidance.destination && <p className="field-help">{guidance.destination.place}{guidance.destination.priceLevel ? ' · daily split weighted by World Bank GDP price level index (' + guidance.destination.priceLevel.year + '). This is a broad country comparison, not a tourist price quote.' : ' · no recent country price index; equal daily weight used.'} <a href="https://data.worldbank.org/indicator/PA.NUS.GDP.PLI" target="_blank" rel="noopener noreferrer">Source: World Bank</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>).</p>}
   </section>;
 }
 export function CategoryBudgets({ trip, expenses }) {

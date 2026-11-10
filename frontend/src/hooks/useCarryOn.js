@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api, EMPTY_RATES, estimate, readSaved, save } from '../lib';
+import { api, CATEGORIES, EMPTY_RATES, estimate, readSaved as readGlobal, save as saveGlobal } from '../lib';
 
-export default function useCarryOn() {
+export default function useCarryOn(scope = 'device') {
+  const [readSaved, save] = useMemo(() => [(key, fallback) => readGlobal(key, fallback, scope), (key, value) => saveGlobal(key, value, scope)], [scope]);
   const [trips, setTrips] = useState(() => readSaved('trips', []));
   const [selectedId, setSelectedId] = useState(() => readSaved('selected', ''));
   const [expensesByTrip, setExpensesByTrip] = useState(() => readSaved('expenses', {}));
@@ -10,6 +11,7 @@ export default function useCarryOn() {
   const [categories, setCategories] = useState(() => readSaved('categories', []));
   const [online, setOnline] = useState(navigator.onLine), [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [loadError, setLoadError] = useState(''), [services, setServices] = useState({});
   const syncing = useRef(false);
   const trip = trips.find((row) => row.id === selectedId) || trips[0];
   const refreshExpenses = useCallback(async (id) => {
@@ -19,13 +21,17 @@ export default function useCarryOn() {
   }, []);
   const refresh = useCallback(async () => {
     try {
-      const [rows, fx, cats] = await Promise.all([api('/api/trips'), api('/api/rates'), api('/api/categories')]);
-      setTrips(rows); save('trips', rows); setRates(fx); save('rates', fx); setCategories(cats.custom); save('categories', cats.custom);
+      const rows = await api('/api/trips');
+      setTrips(rows); save('trips', rows); setLoadError(''); setOnline(true); setLoading(false);
+      // Auxiliary services never block the startup or the saved trip list.
+      api('/api/rates').then((fx) => { setRates(fx); save('rates', fx); }).catch(() => {});
+      api('/api/categories').then((cats) => { setCategories(cats.custom); save('categories', cats.custom); }).catch(() => {});
+      api('/api/services').then(setServices).catch(() => {});
       const id = readSaved('selected', '');
       const active = rows.find((row) => row.id === id)?.id || rows[0]?.id;
       if (active) { setSelectedId(active); save('selected', active); await refreshExpenses(active); }
       setOnline(true);
-    } catch (error) { setOnline(false); setMessage('Could not reach the server. Saved information is available on this device.'); }
+    } catch (error) { setOnline(false); setLoadError(error.message); setMessage('Could not reach the server. Saved information is available on this device.'); }
     finally { setLoading(false); }
   }, [refreshExpenses]);
   const syncQueue = useCallback(async () => {
@@ -52,8 +58,9 @@ export default function useCarryOn() {
   useEffect(() => {
     const connected = () => { setOnline(true); refresh(); syncQueue(); };
     const disconnected = () => setOnline(false);
-    window.addEventListener('online', connected); window.addEventListener('offline', disconnected);
-    return () => { window.removeEventListener('online', connected); window.removeEventListener('offline', disconnected); };
+    const moved = (event) => { if (scope === 'device' && event.key === 'carryon:device-data-moved') refresh(); };
+    window.addEventListener('storage', moved); window.addEventListener('online', connected); window.addEventListener('offline', disconnected);
+    return () => { window.removeEventListener('storage', moved); window.removeEventListener('online', connected); window.removeEventListener('offline', disconnected); };
   }, [refresh, syncQueue]);
   useEffect(() => {
     syncQueue();
@@ -100,7 +107,21 @@ export default function useCarryOn() {
     const created = await api('/api/trips', { method: 'POST', body: JSON.stringify(payload) });
     save('selected', created.id); setSelectedId(created.id); await refresh(); return created;
   }
-  const categoryChoices = Array.from(new Set([...categories, ...queue.map((item) => item.payload.category)]));
-  return { trips, trip, expenses, summary, categories: categoryChoices, rates, online, loading, message, setMessage,
-    selectTrip, saveExpense, savePlan, createTrip, refresh };
+  async function deleteExpense(expense) {
+    if (expense.pending) {
+      if (syncing.current) throw new Error('This expense is syncing. Wait a moment, then remove it from the updated list.');
+      const next = readSaved('queue', []).filter((row) => row.payload.clientId !== expense.clientId);
+      save('queue', next); setQueue(next);
+    } else {
+      await api('/api/expenses/' + expense.id, { method: 'DELETE' }); await refresh();
+    }
+    setMessage('Expense removed. Your remaining balance has been updated.');
+  }
+  async function deleteCategory(name) {
+    await api('/api/categories/' + encodeURIComponent(name), { method: 'DELETE' });
+    const next = categories.filter((item) => item !== name); setCategories(next); save('categories', next);
+  }
+  const categoryChoices = Array.from(new Set([...categories, ...queue.map((item) => item.payload.category)])).filter((name) => !CATEGORIES.includes(name));
+  return { trips, trip, expenses, summary, categories: categoryChoices, rates, online, loading, loadError, services, message, setMessage,
+    selectTrip, saveExpense, savePlan, createTrip, deleteExpense, deleteCategory, refresh };
 }

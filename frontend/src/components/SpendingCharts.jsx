@@ -1,7 +1,7 @@
 import React from 'react';
 import { byCategory, money } from '../lib';
 // Dark variants of the Okabe–Ito hues; labels/percentages carry the meaning too.
-export const CHART_COLORS = ['#00689D', '#A84400', '#00745A', '#894970', '#806100', '#286A7A'];
+export const CHART_COLORS = Array.from({ length: 6 }, (_, index) => 'var(--chart-' + (index + 1) + ')');
 export function chartGroups(expenses) {
   const rows = byCategory(expenses), total = rows.reduce((s, r) => s + r.total, 0);
   const large = [], small = [];

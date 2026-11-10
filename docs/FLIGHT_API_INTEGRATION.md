@@ -1,5 +1,7 @@
 # Ignav flight fare integration
 
+**November 9 update:** [city/airport lookup, automatic server configuration and other feedback fixes](FEEDBACK_IMPLEMENTATION.md) extend this integration. The server now loads its local `.env` automatically.
+
 Implemented November 8, 2026 (live provider response timestamps are UTC, November 9). This update replaces the previous AirLabs-only flight scope. AirLabs remains an optional live-status tool, with its own key; it is not used for fare search.
 
 ## Verified provider choice

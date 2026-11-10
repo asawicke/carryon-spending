@@ -1,6 +1,8 @@
-# CarryOn PWA — complete changed source files
+# CarryOn PWA — November 8 source snapshot
 
-Complete current file contents. Production has no seeded sample data. Test fixtures occur only in tests. Private `.env` and database files are excluded.
+**Historical snapshot:** this predates the November 9 themes, accounts, and feedback fixes. Use the current source files and [feedback report](FEEDBACK_IMPLEMENTATION.md) for this update.
+
+Original snapshot contents. Production has no seeded sample data. Test fixtures occur only in tests. Private `.env` and database files are excluded.
 
 See [research and requirements](PWA_REFINEMENT_REPORT.md) and [Ignav integration and live verification](FLIGHT_API_INTEGRATION.md).
 

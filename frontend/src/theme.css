@@ -1,0 +1,110 @@
+/* Supplied palette: Lime Cream, Baltic Blue, Yale Blue, Ocean Mist, Cinnamon Wood. */
+:root {
+  color-scheme: light;
+  --lime: #ecfeaa; --baltic: #30638e; --yale: #003d5b; --ocean: #60ab9a; --cinnamon: #c06e52;
+  --page: #f2f6f3; --surface: #ffffff; --raised: #eaf2ee; --ink: #003d5b; --muted: #395e6c;
+  --line: #607c88; --soft-line: #ccdcd7; --focus: #30638e; --link: #245b84;
+  --today: #003d5b; --expenses: #30638e; --plan: #82452e;
+  --today-tint: #edf5df; --expenses-tint: #eaf1f7; --plan-tint: #fcf0e9;
+  --hero: #003d5b; --hero-ink: #ecfeaa; --hero-muted: #e1efea; --hero-track: #60ab9a;
+  --button: #003d5b; --button-ink: #ffffff; --error: #8c3529; --error-bg: #fff0e9;
+  --success: #255848; --success-bg: #e7f4ec; --success-line: #39785f;
+  --chart-1: #30638e; --chart-2: #975136; --chart-3: #216b59; --chart-4: #784978; --chart-5: #756009; --chart-6: #365d70;
+  --accent: var(--today); --tint: var(--today-tint);
+  color: var(--ink); background: var(--page); font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+:root[data-theme=dark] {
+  color-scheme: dark;
+  --page: #061e2b; --surface: #0c2d3c; --raised: #153d49; --ink: #f0f6f2; --muted: #b9ccc8;
+  --line: #719c9f; --soft-line: #325764; --focus: #ecfeaa; --link: #badcf3;
+  --today: #ecfeaa; --expenses: #afd5f1; --plan: #f1baa4;
+  --today-tint: #1c3e35; --expenses-tint: #173e54; --plan-tint: #442e28;
+  --hero: #003d5b; --hero-ink: #ecfeaa; --hero-muted: #e1efea; --hero-track: #60ab9a;
+  --button: #ecfeaa; --button-ink: #003d5b; --error: #ffb6a3; --error-bg: #482d2a;
+  --success: #a6dfc5; --success-bg: #153e34; --success-line: #75b89f;
+  --chart-1: #afd5f1; --chart-2: #f1baa4; --chart-3: #82cdb6; --chart-4: #d5b6dc; --chart-5: #ecfeaa; --chart-6: #9ccbd3;
+}
+body, .app-shell { background: var(--page); color: var(--ink); }
+.section-today { --accent: var(--today); --tint: var(--today-tint); }
+.section-expenses { --accent: var(--expenses); --tint: var(--expenses-tint); }
+.section-plan { --accent: var(--plan); --tint: var(--plan-tint); }
+a { color: var(--link); }
+.brand { color: var(--ink); }.brand-dot { color: var(--cinnamon); }
+.site-header,.bottom-nav,.nav-inner button { background: var(--surface); color: var(--ink); border-color: var(--soft-line); }
+.site-header { border-top-color: var(--accent); }
+.trip-select-label select,.text-input,.dollar-input,.amount-field,.amount-field select,.amount-field input,.impact-input,.impact-input input,.impact-result,.skip-link { background: var(--surface); color: var(--ink); border-color: var(--line); }
+input, select, button, textarea { color: inherit; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+input { max-width: 100%; }
+input[type=date] { min-width: 0; max-width: 100%; }
+input[type=checkbox],progress { accent-color: var(--accent); }
+.icon-button:hover,.icon-button:focus-visible,.button.outline:hover,.nav-inner button:hover { background: var(--raised); }
+.intro p,.eyebrow,.metric-card small,.expense-main span,.expense-amount span,.rate-note,.field-help,.card-description,.impact-card p,.impact-result span,.empty-list,.optional,.preparation-list small,.category-progress small { color: var(--muted); }
+.budget-card,.plan-total,.expenses-total { color: var(--hero-ink); background: var(--hero); border-color: var(--hero); }
+.budget-card .eyebrow,.plan-total .eyebrow,.expenses-total .eyebrow,.budget-hero p,.plan-total p,.expenses-total p { color: var(--hero-muted); }
+.budget-hero h2,.plan-total h2,.expenses-total h2 { color: var(--hero-ink); }
+.small-tag { border-color: var(--ocean); color: var(--hero-muted); }
+.donut { background: conic-gradient(var(--lime) var(--percent),var(--hero-track) var(--percent)); }
+.donut > div { background: var(--hero); color: var(--hero-ink); }.donut span { color: var(--hero-muted); }
+.budget-guidance { background: #002e46; color: var(--hero-muted); }
+.add-expense-card,.metric-card,.plan-card,.list-card,.category-summary,.donut-card,.flight-panel,.modal { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.add-expense-card { box-shadow: 3px 3px 0 var(--accent); border-color: var(--accent); }
+.add-expense-card:hover { box-shadow: 1px 1px 0 var(--accent); }
+.plus-square,.button.primary { background: var(--button); color: var(--button-ink); border-color: var(--button); }
+.button.primary:hover { background: var(--button); filter: brightness(.94); }
+.button.outline { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+.plan-total .button.outline { background: var(--lime); color: var(--yale); border-color: var(--lime); }
+.impact-card,.pace-note,.preparation-summary,.saved-flight,.expense-mark,.suggestion-preview { background: var(--tint); color: var(--ink); }
+.impact-card,.expense-mark,.impact-result,.pace-note,.saved-flight { border-color: var(--accent); }
+.expense-row,.category-budget,.extra-row,.summary-row,.category-progress,.category-list,.fare-search { border-color: var(--soft-line); }
+.allocation { border-color: var(--line); }
+.preparation-summary,.chart-legend,.summary-row { color: var(--ink); }
+.nav-inner button { color: var(--muted); }
+.nav-inner .nav-today.active { color: var(--today); background: var(--today-tint); border-top-color: var(--today); }
+.nav-inner .nav-expenses.active { color: var(--expenses); background: var(--expenses-tint); border-top-color: var(--expenses); }
+.nav-inner .nav-plan.active { color: var(--plan); background: var(--plan-tint); border-top-color: var(--plan); }
+.summary-bar { background: var(--raised); border: 1px solid var(--line); }
+.donut-total { fill: var(--ink); }.donut-caption { fill: var(--muted); }.legend-swatch { border-color: var(--line); }
+.offline-banner,.status-banner { background: var(--raised); color: var(--ink); border-color: var(--line); }
+.form-error,.allocation.over strong,.pace-note.over,.impact-result.negative { color: var(--error); }
+.save-message { background: var(--error-bg); color: var(--error); border-color: var(--error); }
+.save-message.success { color: var(--success); background: var(--success-bg); border-color: var(--success-line); }
+.modal { --accent: var(--today); --tint: var(--today-tint); border-color: var(--line); }
+.modal::backdrop { background: rgb(0 16 27 / .76); }
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.amount-field:focus-within,.dollar-input:focus-within,.impact-input:focus-within { outline-color: var(--focus); }
+.modal .field-label { margin-top: 16px; }
+.amount-field select { width: 108px; min-width: 0; font-size: 14px; }
+.amount-field select option { white-space: normal; }
+.settings-stack > section + section,.settings-stack > details { border-top: 1px solid var(--soft-line); margin-top: 24px; padding-top: 16px; }
+.settings-stack h3 { font-size: 18px; margin: 0 0 12px; }
+.segmented,.form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.segmented [aria-pressed=true] { background: var(--button); color: var(--button-ink); border-color: var(--button); }
+.settings-categories { list-style: none; padding: 0; }.settings-categories li { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 10px 0; overflow-wrap: anywhere; }
+.confirmation { border: 1px solid var(--line); border-radius: 6px; padding: 12px; margin-top: 16px; }
+.button.danger { border-color: var(--error); background: var(--error-bg); color: var(--error); }
+.quick-guide { display: grid; gap: 16px; padding-left: 24px; line-height: 1.6; }.quick-guide p { color: var(--muted); margin: 5px 0 0; font-size: 14px; }
+.welcome { padding-block: 12px; }.welcome h1 { font-size: clamp(30px,6vw,43px); line-height: 1.1; letter-spacing: -.04em; }
+.welcome-copy { font-size: 17px; color: var(--muted); line-height: 1.6; max-width: 46ch; }
+.destination-fields { border: 0; margin: 24px 0 0; padding: 0; min-width: 0; }.destination-fields legend { font-size: 18px; font-weight: 700; }
+.destination-card { border: 1px solid var(--line); padding: 16px; border-radius: 8px; margin: 16px 0; }.destination-card .section-heading { margin-top: 0; }.destination-card h3 { margin: 0; }
+.daily-category-settings,.itinerary-editor { margin-top: 16px; }.daily-category-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }.daily-category-choices .check-option { margin-top: 8px; }
+.budget-starter { margin-top: 12px; border-bottom: 1px solid var(--soft-line); padding-bottom: 12px; }.budget-starter > .button { margin-top: 14px; }
+.suggestion-preview { padding: 14px; border-radius: 6px; margin-top: 16px; font-size: 14px; line-height: 1.6; }
+.suggestion-values > div { display: flex; justify-content: space-between; gap: 12px; }.suggestion-values dd { margin: 0; font-weight: 650; }
+.expense-actions { display: flex; flex: 0 0 auto; }.expense-actions .icon-button { width: 44px; }
+.airport-picker { min-width: 0; }.airport-picker .lookup-row { flex-wrap: wrap; }.airport-picker .lookup-row input { flex: 1 1 100px; }.airport-picker .text-input { font-size: 15px; }
+.field-grid > * { min-width: 0; }
+@media (max-width:420px) { .expense-actions { flex-direction: column; }.expense-row { min-height: 94px; }.field-grid:has(.airport-picker) { grid-template-columns: 1fr; }.category-budget { flex-wrap: wrap; }.header-inner { gap: 8px; }.daily-category-choices { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+@media (forced-colors:active) { .button,.icon-button,.text-input,.legend-swatch { border: 1px solid ButtonText; }.nav-inner .active { border-top: 3px solid Highlight; } }
+
+.budget-card .button:focus-visible,.plan-total .button:focus-visible { outline-color: var(--lime); }
+
+.content h1:focus { outline: none; }
+/* Keep monetary values intact at narrow widths; the ring wraps when needed. */
+.budget-hero { flex-wrap: wrap; gap: 12px; padding-block: 12px; }
+.budget-hero > div:first-child { flex: 1 0 auto; max-width: 100%; }
+.budget-hero h2 { font-size: clamp(30px,7vw,57px); overflow-wrap: normal; white-space: nowrap; }
+@media (max-width:360px) { .budget-hero .donut { width: 76px; }.budget-hero .donut > div { width: 54px; } }
+.donut { background: conic-gradient(var(--lime) 0 var(--percent),var(--hero) var(--percent) calc(var(--percent) + 1%),var(--hero-track) calc(var(--percent) + 1%) 100%); }

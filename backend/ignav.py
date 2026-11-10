@@ -3,14 +3,17 @@ import json
 import math
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from urllib.parse import urlencode
 
 from flask import current_app
 from .providers import ProviderError
 
 
 def post_json(endpoint, payload, key):
-    request = Request("https://ignav.com/api/fares/" + endpoint,
-                      data=json.dumps(payload).encode(), method="POST",
+    airport_search = endpoint == "airports"
+    url = "https://ignav.com/api/airports?" + urlencode(payload) if airport_search else "https://ignav.com/api/fares/" + endpoint
+    request = Request(url,
+                      data=None if airport_search else json.dumps(payload).encode(), method="GET" if airport_search else "POST",
                       headers={"X-Api-Key": key, "Content-Type": "application/json", "Accept": "application/json"})
     try:
         with urlopen(request, timeout=60) as response:
@@ -77,6 +80,18 @@ def normalize_itinerary(item):
 
 class IgnavProvider:
     name = "Ignav"
+
+    def airports(self, query):
+        key = current_app.config.get("IGNAV_API_KEY")
+        if not key:
+            raise ProviderError("Airport search is not configured. Enter an IATA code or configure the server key.", 503, "not_configured")
+        data = current_app.config.get("IGNAV_HTTP", post_json)("airports", {"q": query, "limit": 12}, key)
+        if not isinstance(data, list):
+            raise ProviderError("Airport results could not be read. Try another city or enter an IATA code.")
+        return [{"code": text(item.get("code"),3), "name": text(item.get("name")),
+                 "city": text(item.get("city")), "country": text(item.get("country"),2)}
+                for item in data if isinstance(item, dict) and isinstance(item.get("code"), str)
+                and len(item["code"]) == 3 and item["code"].isalpha()]
 
     def request(self, endpoint, payload):
         key = current_app.config.get("IGNAV_API_KEY")

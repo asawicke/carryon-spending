@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import SavedFlights from './SavedFlights';
 import FlightFareSearch from './FlightFareSearch';
 import { api, CURRENCIES, estimate, money, localDate } from '../lib';
-export default function FlightPanel({ trip, rates, onSaved }) {
+export default function FlightPanel({ trip, rates, services, onSaved }) {
   const [flights, setFlights] = useState([]), [message, setMessage] = useState(''), [error, setError] = useState('');
   const [busy, setBusy] = useState(false), [searched, setSearched] = useState(false);
   const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
@@ -35,10 +35,10 @@ export default function FlightPanel({ trip, rates, onSaved }) {
   const home = estimate(form.fare, form.currency, trip.currency, rates);
   const planned = Number(trip.categoryBudgets.Flights || trip.categoryBudgets.Transit || 0);
   return <details className="flight-panel"><summary>Flights · fare search and tickets</summary><div className="flight-body">
-    <FlightFareSearch trip={trip} rates={rates}/>
+    <FlightFareSearch trip={trip} rates={rates} services={services}/>
     <h3>Add a ticket you purchased</h3><SavedFlights flights={flights} currency={trip.currency}/>
-    <p className="card-description">Enter your actual ticket details below. Optional current-status lookup uses AirLabs and needs a separate server key. Fare search above uses Ignav. CarryOn does not sell or book tickets.</p>
-    <form onSubmit={submit}><label className="field-label" htmlFor="flight-number">Flight code on your ticket</label><div className="lookup-row"><input id="flight-number" className="text-input" placeholder="e.g. AA100" required maxLength="10" value={form.flightNumber} onChange={(e) => change('flightNumber', e.target.value.toUpperCase().replace(/\s/g, ''))}/><button type="button" className="button outline" disabled={busy || !form.flightNumber.trim()} onClick={search}>{busy ? 'Working…' : 'Look up'}</button></div>
+    <p className="card-description">Enter your actual ticket details below. Current-status lookup is shown only when its separate AirLabs key is configured. Fare search above uses Ignav. CarryOn does not sell or book tickets.</p>
+    <form onSubmit={submit}><label className="field-label" htmlFor="flight-number">Flight code on your ticket</label><div className="lookup-row"><input id="flight-number" className="text-input" placeholder="e.g. AA100" required maxLength="10" value={form.flightNumber} onChange={(e) => change('flightNumber', e.target.value.toUpperCase().replace(/\s/g, ''))}/>{services?.flightStatus && <button type="button" className="button outline" disabled={busy || !form.flightNumber.trim()} onClick={search}>{busy ? 'Working…' : 'Check status'}</button>}</div>
       <div className="field-grid">{[['origin', 'Departure airport'], ['destination', 'Arrival airport']].map(([key, label]) => <div key={key}><label className="field-label" htmlFor={'flight-' + key}>{label}</label><input id={'flight-' + key} className="text-input" required pattern="[A-Za-z]{3}" maxLength="3" value={form[key]} onChange={(e) => change(key, e.target.value.toUpperCase())} aria-describedby="airport-help"/></div>)}</div><p id="airport-help" className="field-help">Three-letter airport codes, such as DTW or CDG. Some free lookup fields may be unavailable.</p>
       <label className="field-label" htmlFor="flight-date">Departure date (airport local date)</label><input id="flight-date" className="text-input" type="date" required value={form.departureDate} onChange={(e) => change('departureDate', e.target.value)}/>
       <div className="field-grid"><div><label className="field-label" htmlFor="flight-fare">Fare from your ticket</label><input id="flight-fare" className="text-input" type="number" min={form.logExpense ? '.01' : '0'} step=".01" required value={form.fare} onChange={(e) => change('fare', e.target.value)}/></div><div><label className="field-label" htmlFor="flight-currency">Fare currency</label><select id="flight-currency" className="text-input" value={form.currency} onChange={(e) => change('currency', e.target.value)}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select></div></div>

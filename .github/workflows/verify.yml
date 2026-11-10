@@ -1,0 +1,45 @@
+name: Verify CarryOn
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: isolated-ci-fixture
+          POSTGRES_DB: carryon_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      CARRYON_TEST_POSTGRES_URL: postgresql://postgres:isolated-ci-fixture@localhost:5432/carryon_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s backend/tests -v
+      - run: npm ci --prefix frontend
+      - run: npm test --prefix frontend
+      - run: npm run build --prefix frontend
+      - run: python scripts/package_deployment.py carryon-deploy.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: carryon-deployment
+          path: carryon-deploy.zip
+          retention-days: 3

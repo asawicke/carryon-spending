@@ -1,5 +1,7 @@
 # CarryOn PWA refinement report
 
+**November 9 feedback update:** [current changes and verification](FEEDBACK_IMPLEMENTATION.md) supersede the earlier theme, account and daily-budget limitations below.
+
 **Flight integration update:** [Ignav fare search and live verification](FLIGHT_API_INTEGRATION.md) supersedes the AirLabs-only scope and no-key limitation in sections 4, 7–9 below. AirLabs is now optional status lookup; Ignav provides actual fare estimates.
 
 Research date: November 8, 2026. The existing repository supplied the current frontend and data model. No replacement frontend or new screenshot attachments were included with this request. Research preceded implementation. Existing untracked logo and slide work was left untouched.

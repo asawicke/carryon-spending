@@ -1,5 +1,5 @@
-const CACHE = 'carryon-shell-v6';
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'carryon-shell-v8';
+const SHELL = ['/', '/index.html', '/theme.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {

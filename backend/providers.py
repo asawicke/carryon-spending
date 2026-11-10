@@ -7,8 +7,9 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from flask import current_app
+from .catalog import CURRENCY_CODES
 
-SUPPORTED_CURRENCIES = ("USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "INR", "NZD")
+SUPPORTED_CURRENCIES = CURRENCY_CODES
 
 
 class ProviderError(Exception):
@@ -35,18 +36,19 @@ def cached(db, key):
 
 
 def put_cache(db, key, data, ttl):
-    db.execute("INSERT OR REPLACE INTO provider_cache VALUES (?, ?, ?, ?)",
+    db.execute("INSERT INTO provider_cache VALUES (?, ?, ?, ?) ON CONFLICT(key) DO UPDATE SET "
+               "data=excluded.data,created_at=excluded.created_at,expires_at=excluded.expires_at",
                (key, json.dumps(data), time.time(), time.time() + ttl))
     db.commit()
 
 
 def rates(db):
-    key = "rates:USD"
+    key = "rates:USD:worldwide"
     row = cached(db, key)
     if row and row["expires_at"] > time.time():
         return json.loads(row["data"])
     try:
-        query = urlencode({"base": "USD", "quotes": ",".join(SUPPORTED_CURRENCIES[1:])})
+        query = urlencode({"base": "USD"})
         transport = current_app.config.get("HTTP_FETCH", fetch_json)
         rows = transport("https://api.frankfurter.dev/v2/rates?" + query)
         values, dates = {"USD": 1}, {}
@@ -68,7 +70,7 @@ def rates(db):
             return {**json.loads(row["data"]), "stale": True}
         # One is an identity conversion, never a fabricated foreign-currency rate.
         return {"base": "USD", "rates": {"USD": 1}, "dates": {}, "source": "Frankfurter",
-                "unavailable": True, "message": "Exchange rates are unavailable. You can still enter USD expenses."}
+                "unavailable": True, "message": "Exchange rates are unavailable. You can still record expenses in your trip's home currency."}
 
 
 def flight_lookup(db, number):
@@ -86,7 +88,7 @@ def flight_lookup(db, number):
     month = time.strftime("%Y-%m", time.gmtime())
     limit = int(current_app.config.get("AIRLABS_MONTHLY_LIMIT", 900))
     # Atomic local budget, shared across processes/restarts; failed calls count too.
-    db.execute("INSERT OR IGNORE INTO provider_usage VALUES (?, 0)", (month,))
+    db.execute("INSERT INTO provider_usage VALUES (?, 0) ON CONFLICT DO NOTHING", (month,))
     allowed = db.execute("UPDATE provider_usage SET count=count+1 WHERE month=? AND count<?",
                          (month, limit)).rowcount
     db.commit()

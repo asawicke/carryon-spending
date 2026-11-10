@@ -1,0 +1,2 @@
+-r backend/requirements.txt
+azure-functions>=1.21,<2

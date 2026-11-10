@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import FareOffer from './FareOffer';
+import AirportPicker from './AirportPicker';
 import { api, localDate, money } from '../lib';
 
-export default function FlightFareSearch({ trip, rates }) {
+export default function FlightFareSearch({ trip, rates, services }) {
   const path = '/api/trips/' + trip.id;
   const [form, setForm] = useState({ origin: '', destination: '', departureDate: trip.startDate < localDate() ? '' : trip.startDate, returnDate: '', nonstop: false });
   const [result, setResult] = useState(null), [saved, setSaved] = useState([]), [bookings, setBookings] = useState({});
@@ -13,6 +14,7 @@ export default function FlightFareSearch({ trip, rates }) {
   const change = (key, value) => { setForm((f) => ({ ...f, [key]: value })); setResult(null); setBookings({}); setMessage(''); setError(''); };
   async function search(event) {
     event.preventDefault(); setBusy(true); setError(''); setMessage(''); setResult(null); setBookings({});
+    if (!form.origin || !form.destination) { setError('Choose a departure and arrival airport, or enter their three-letter IATA codes.'); setBusy(false); return; }
     try {
       const data = await api(path + '/fare-search', { method: 'POST', body: JSON.stringify(form) });
       setResult(data);
@@ -37,11 +39,10 @@ export default function FlightFareSearch({ trip, rates }) {
   }
   return <section className="fare-search" aria-labelledby="fare-search-heading" aria-busy={busy}>
     <h3 id="fare-search-heading">Find a flight estimate</h3>
+    {services?.fareSearch === false && <p className="form-error">Flight search needs a server API key. Open Settings → Connection and services for setup information. You can still enter purchased tickets below.</p>}
     <p className="card-description">Compare fares with your plan before buying. Searches are for one adult in economy, priced in the US market. Returned currencies are shown explicitly.</p>
     <form onSubmit={search}><fieldset disabled={busy} className="fare-fields"><legend className="sr-only">Flight search</legend>
-      <div className="field-grid">{[['origin', 'From airport or city'], ['destination', 'To airport or city']].map(([key, label]) => <div key={key}>
-        <label className="field-label" htmlFor={'fare-' + key}>{label}</label><input id={'fare-' + key} className="text-input" value={form[key]} required pattern="[A-Za-z]{3}" maxLength="3" placeholder={key === 'origin' ? 'DTW' : 'PAR'} aria-describedby="fare-airport-help" onChange={(e) => change(key, e.target.value.toUpperCase())}/>
-      </div>)}</div><p id="fare-airport-help" className="field-help">Use a three-letter airport or city code: DTW (Detroit), CDG (Paris airport), PAR (all Paris airports), LON (London).</p>
+      <div className="field-grid">{[['origin', 'From city or airport'], ['destination', 'To city or airport']].map(([key, label]) => <AirportPicker key={key} id={'fare-' + key} label={label} value={form[key]} disabled={busy} onChange={(value) => change(key, value)}/>)}</div><p className="field-help">Fare search uses IATA airport/metro codes. Airports without a supported IATA code cannot be searched here; try a nearby commercial airport. Finding airports uses one provider request and is cached for a week.</p>
       <div className="field-grid"><div><label className="field-label" htmlFor="fare-departure">Departure</label><input className="text-input" id="fare-departure" type="date" required min={localDate()} value={form.departureDate} onChange={(e) => change('departureDate', e.target.value)}/></div>
         <div><label className="field-label" htmlFor="fare-return">Return (optional)</label><input className="text-input" id="fare-return" type="date" min={form.departureDate || localDate()} value={form.returnDate} onChange={(e) => change('returnDate', e.target.value)}/></div></div>
       <label className="check-option"><input type="checkbox" checked={form.nonstop} onChange={(e) => change('nonstop', e.target.checked)}/>Nonstop only</label>

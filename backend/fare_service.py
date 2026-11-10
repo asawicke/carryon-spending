@@ -23,7 +23,7 @@ def provider():
 def reserve_request(db):
     day = "ignav:" + time.strftime("%Y-%m-%d", time.gmtime())
     limit = int(current_app.config.get("IGNAV_DAILY_LIMIT", 20))
-    db.execute("INSERT OR IGNORE INTO flight_api_usage VALUES (?, 0)", (day,))
+    db.execute("INSERT INTO flight_api_usage VALUES (?, 0) ON CONFLICT DO NOTHING", (day,))
     allowed = db.execute("UPDATE flight_api_usage SET count=count+1 WHERE period=? AND count<?",
                          (day, limit)).rowcount
     db.commit()

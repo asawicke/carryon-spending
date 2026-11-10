@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import Icon from './Icons';
+import CurrencySelect from './CurrencySelect';
 import { CATEGORIES, CURRENCIES, estimate, localDate, money, positiveAmount } from '../lib';
 export default function ExpenseForm({ trip, rates, categories, expense, onClose, onSave }) {
-  const choices = Array.from(new Set([...CATEGORIES, ...categories]));
-  const [form, setForm] = useState({ amount: expense?.amount ?? '', currency: expense?.currency || trip.localCurrency,
-    category: expense?.category || 'Food', note: expense?.note || '', date: expense?.date || localDate(), custom: '' });
+  const choices = Array.from(new Set([...CATEGORIES, ...categories, ...(expense ? [expense.category] : [])]));
+  const stops = trip.destinations || [];
+  const current = stops.find((stop) => stop.startDate <= localDate() && stop.endDate >= localDate()) || stops[0];
+  const [form, setForm] = useState({ amount: expense?.amount ?? '', currency: expense?.currency || current?.currency || trip.localCurrency,
+    destinationId: expense?.destinationId || current?.id || '', category: expense?.category || 'Food', note: expense?.note || '', date: expense?.date || localDate(), custom: '' });
   const [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const amount = Number(String(form.amount).replace(',', '.'));
   const home = estimate(amount, form.currency, trip.currency, rates);
@@ -17,15 +20,16 @@ export default function ExpenseForm({ trip, rates, categories, expense, onClose,
     const category = form.category === 'Other' ? form.custom.trim().replace(/\s+/g, ' ') : form.category;
     if (!category) { setError('Give your custom category a name.'); return; }
     setBusy(true);
-    try { await onSave({ amount, currency: form.currency, category, note: form.note.trim(), date: form.date }, expense); onClose(); }
+    try { await onSave({ amount, currency: form.currency, category, note: form.note.trim(), date: form.date, destinationId: form.destinationId }, expense); onClose(); }
     catch (err) { setError(err.message); } finally { setBusy(false); }
   }
   const rateDate = rates.dates?.[form.currency === 'USD' ? trip.currency : form.currency];
   return <Modal title={expense ? 'Edit expense' : 'Add an expense'} onClose={onClose}><form onSubmit={submit}>
     <label className="field-label" htmlFor="expense-amount">Amount</label>
-    <div className="amount-field"><select aria-label="Expense currency" value={form.currency} onChange={(e) => update('currency', e.target.value)}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select>
+    <div className="amount-field"><CurrencySelect aria-label="Expense currency" value={form.currency} onChange={(e) => update('currency', e.target.value)}/>
       <input id="expense-amount" type="text" inputMode="decimal" required pattern="(?:[0-9]+(?:[.,][0-9]{1,2})?|[.,][0-9]{1,2})" maxLength="16" value={form.amount} onChange={(e) => update('amount', e.target.value)} placeholder="0.00" aria-describedby="conversion-help" data-initial-focus autoFocus /></div>
     <p id="conversion-help" className="field-help" aria-live="polite">{home === null ? 'Exchange rate unavailable. Choose your home currency or try again later.' : 'About ' + money(home, trip.currency) + ' in your home currency.'} {form.currency !== trip.currency && home !== null && <>Frankfurter reference rate{rateDate ? ' dated ' + rateDate : ''}{rates.stale ? ' (cached)' : ''}. Your bank may charge a different rate or fees.</>}</p>
+    {stops.length > 0 && <><label className="field-label" htmlFor="expense-destination">Destination</label><select id="expense-destination" className="text-input" value={form.destinationId} onChange={(e) => { const stop = stops.find((row) => row.id === e.target.value); setForm((previous) => ({ ...previous, destinationId: e.target.value, currency: stop?.currency || previous.currency })); }}><option value="">Whole trip / before departure</option>{stops.map((stop) => <option key={stop.id} value={stop.id}>{stop.place} · {stop.currency}</option>)}</select></>}
     <label className="field-label" htmlFor="expense-note">What was it for? <span className="optional">(optional)</span></label>
     <input id="expense-note" className="text-input" maxLength="200" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="Coffee near the station" />
     <label className="field-label" htmlFor="expense-category">Category</label>

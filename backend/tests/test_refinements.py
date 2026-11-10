@@ -23,12 +23,12 @@ class RefinementTests(unittest.TestCase):
             if "frankfurter" in url:
                 return fixture_http(url)
             return self.flight_response
-        self.config = {"TESTING": True, "DATABASE_PATH": self.path,
+        self.config = {"TESTING": True, "ALLOW_LEGACY_DEVICE_ACCESS": True, "DATABASE_PATH": self.path,
                        "HTTP_FETCH": transport, "AIRLABS_API_KEY": "test-only"}
         self.app = create_app(self.config)
         self.client = self.app.test_client()
         self.trip = self.client.post("/api/trips", json={"name": "QA", "destination": "London",
-            "budget": 1000, "currency": "USD", "localCurrency": "GBP",
+            "budget": 1000, "currency": "USD", "localCurrency": "GBP", "recordPast": True,
             "startDate": "2026-11-08", "endDate": "2026-11-12"}).json
 
     def tearDown(self):

@@ -19,7 +19,7 @@ class CarryOnApiTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.db_path = str(Path(self.temp.name) / "carryon.db")
-        self.app = create_app({"TESTING": True, "DATABASE_PATH": self.db_path, "HTTP_FETCH": fixture_http})
+        self.app = create_app({"TESTING": True, "ALLOW_LEGACY_DEVICE_ACCESS": True, "DATABASE_PATH": self.db_path, "HTTP_FETCH": fixture_http})
         self.client = self.app.test_client()
 
     def tearDown(self):
@@ -52,7 +52,7 @@ class CarryOnApiTests(unittest.TestCase):
             "overlookedCosts": [{"id": "insurance", "label": "Travel insurance", "estimate": 25, "checked": True}],
         })
         self.assertEqual(response.status_code, 200, response.json)
-        restarted = create_app({"TESTING": True, "DATABASE_PATH": self.db_path, "HTTP_FETCH": fixture_http})
+        restarted = create_app({"TESTING": True, "ALLOW_LEGACY_DEVICE_ACCESS": True, "DATABASE_PATH": self.db_path, "HTTP_FETCH": fixture_http})
         saved = restarted.test_client().get(f"/api/trips/{trip_id}").json
         self.assertEqual(saved["budget"], 120.0)
         self.assertEqual(saved["categoryBudgets"], {"Food": 70.0, "Transit": 50.0})
@@ -71,7 +71,7 @@ class CarryOnApiTests(unittest.TestCase):
         self.assertEqual(replay.status_code, 200)
         self.assertEqual(replay.json["id"], first.json["id"])
 
-        restarted = create_app({"TESTING": True, "DATABASE_PATH": self.db_path, "HTTP_FETCH": fixture_http})
+        restarted = create_app({"TESTING": True, "ALLOW_LEGACY_DEVICE_ACCESS": True, "DATABASE_PATH": self.db_path, "HTTP_FETCH": fixture_http})
         saved = restarted.test_client().get(f"/api/trips/{trip_id}").json
         self.assertEqual(saved["summary"]["spent"], 50.0)
         self.assertEqual(saved["summary"]["remaining"], 50.0)

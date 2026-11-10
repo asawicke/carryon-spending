@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "serverName": { "type": "string" },
+    "location": { "type": "string", "defaultValue": "northcentralus" },
+    "administratorLogin": { "type": "string", "defaultValue": "carryonowner" },
+    "administratorPassword": { "type": "secureString" }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "apiVersion": "2024-08-01",
+      "name": "[parameters('serverName')]",
+      "location": "[parameters('location')]",
+      "tags": { "project": "carryon", "environment": "capstone" },
+      "sku": { "name": "Standard_B1ms", "tier": "Burstable" },
+      "properties": {
+        "administratorLogin": "[parameters('administratorLogin')]",
+        "administratorLoginPassword": "[parameters('administratorPassword')]",
+        "version": "16",
+        "storage": { "storageSizeGB": 32, "autoGrow": "Disabled" },
+        "backup": { "backupRetentionDays": 7, "geoRedundantBackup": "Disabled" },
+        "highAvailability": { "mode": "Disabled" },
+        "network": { "publicNetworkAccess": "Enabled" },
+        "authConfig": { "passwordAuth": "Enabled", "activeDirectoryAuth": "Disabled" }
+      }
+    }
+  ],
+  "outputs": {
+    "serverHost": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('serverName'))).fullyQualifiedDomainName]"
+    }
+  }
+}

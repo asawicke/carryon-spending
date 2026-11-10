@@ -2,7 +2,7 @@
 
 ## Lo-Fi prototype
 
-A travel budgeting PWA built with React, Flask, and SQLite. Plan a trip, track expenses in local and home currencies, view spending charts, create custom categories, and search flight fares.
+A travel budgeting PWA built with React, Flask, and SQLite. Plan a trip, track expenses in local and home currencies, view spending charts, create custom categories, and search flight fares. Includes light/dark themes, local accounts, multi-destination trips, and editable budget suggestions.
 
 ## Run locally
 
@@ -31,16 +31,13 @@ Manual ticket entry works without an API key. To enable fare search:
 
 1. [Create an Ignav account](https://ignav.com/signup), review its terms, verify your email, and get your key from the dashboard.
 2. Copy `.env.example` to `.env` **only if `.env` does not already exist**. Enter your key privately as `IGNAV_API_KEY`.
-3. Load the configuration and restart Flask:
+3. Restart Flask. It now reads `.env` automatically (existing environment variables take precedence):
 
 ```sh
-set -a
-source .env
-set +a
 PORT=5050 python -m backend.app
 ```
 
-On PowerShell, set `$env:IGNAV_API_KEY` locally before starting Python. Flask reads environment variables; it does not load `.env` automatically. Never commit keys or put them in frontend code or `VITE_` variables.
+On PowerShell, edit the same `.env` file, set `$env:PORT = '5050'`, then start Python. Never commit keys or put them in frontend code or `VITE_` variables.
 
 Open **Plan → Flights · fare search and tickets**. Search one-way or round-trip fares for one adult in economy using airport/city codes such as DTW or PAR. Searches use the US pricing market and display the returned currency. Save an estimate without changing spending, or open seller booking options. Record purchased tickets separately.
 
@@ -52,13 +49,20 @@ Optional AirLabs live-status lookup uses a separate `AIRLABS_API_KEY`; it is not
 
 - SQLite stores trips, expenses, categories, checklists, tickets, and saved quotes at `backend/data/carryon.db`. Back it up before moving it. `CARRYON_DB_PATH` selects another location. Databases and `.env` are excluded from Git.
 - [Frankfurter](https://frankfurter.dev) provides daily reference exchange rates, cached for six hours. Conversions are estimates and may differ from bank rates or fees. Saved expenses retain their conversion rate.
-- Offline expense entries are queued and synced with stable IDs. Trip creation, plan saves, and flights require the server. This is a local, single-user prototype.
+- Sign in or create an account on the first screen. Accounts separate trips on this local server; Settings offers an explicit move of earlier device trips. An open workspace can queue expenses offline, but signing in or reloading requires the server. Cloud sync, email verification and password reset are not included.
 - Frontend code is in `frontend/src/`; APIs and provider adapters are in `backend/`. For frontend development, run Flask on port 5000 and `npm run dev --prefix frontend` separately; use Vite's printed URL.
+
+## Themes and planning
+
+Use the header Settings button for **Light**, **Dark**, or **Use device setting**, accounts, custom-category removal, and service status. Plan supports multiple destinations and currencies. **Help me split my budget** previews an editable allocation after fixed costs and one emergency reserve. Daily guidance excludes those protected funds; recent World Bank country price indexes weight the relative split where available, with source/year shown.
+
+Optional **Google sign-in** needs a Google Cloud **Web application** client ID. Add your localhost origin in Google Auth Platform, set `GOOGLE_CLIENT_ID` in `.env`, and restart. No client secret is needed for this flow. [Setup and limitations](docs/GOOGLE_SIGN_IN.md).
 
 ## Verify
 
 ```sh
 python -m unittest discover -s backend/tests -v
+npm test --prefix frontend
 npm run build --prefix frontend
 ```
 
@@ -66,4 +70,4 @@ Tests use temporary databases and isolated fixtures, not production sample data.
 
 ## Project references
 
-[Research and requirements audit](docs/PWA_REFINEMENT_REPORT.md) · [Flight integration](docs/FLIGHT_API_INTEGRATION.md) · [Drive folder](https://drive.google.com/drive/folders/130RJwSIgSeLF7ZevDTFqgfarOgmiQ-yF) · [Requirements](https://docs.google.com/document/d/1JayOina8pale-Gw71MvVIuDWl6Kys1jVBq2v5S1WbWE) · [Figma](https://www.figma.com/make/NUjJLaoI0HzRKz7lWTytJU/Lofi-Prototype-Creation)
+[Feedback fixes and verification](docs/FEEDBACK_IMPLEMENTATION.md) · [Research and requirements audit](docs/PWA_REFINEMENT_REPORT.md) · [Flight integration](docs/FLIGHT_API_INTEGRATION.md) · [Drive folder](https://drive.google.com/drive/folders/130RJwSIgSeLF7ZevDTFqgfarOgmiQ-yF) · [Requirements](https://docs.google.com/document/d/1JayOina8pale-Gw71MvVIuDWl6Kys1jVBq2v5S1WbWE) · [Figma](https://www.figma.com/make/NUjJLaoI0HzRKz7lWTytJU/Lofi-Prototype-Creation)

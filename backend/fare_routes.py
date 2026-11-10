@@ -6,10 +6,23 @@ from datetime import date
 
 from flask import request
 from .fare_service import search_fares, select_offer, booking_options
+from .fare_service import provider, with_cache
+import hashlib
 
 
 def register_fares(app, helpers):
     db, trip_row, body, error = (helpers[key] for key in ("get_db", "trip_row", "body_object", "ApiError"))
+
+    @app.post("/api/airports/search")
+    def airports():
+        data = body()
+        helpers["require_allowed"](data, {"query"})
+        query = helpers["text_field"](data.get("query"), "City, airport or country", maximum=80)
+        if len(query) < 2:
+            raise error("Enter at least two characters to find airports.")
+        adapter = provider()
+        key = "airports:" + hashlib.sha256(query.casefold().encode()).hexdigest()
+        return with_cache(db(), key, lambda: {"airports": adapter.airports(query)}, 7 * 86400)
 
     @app.post("/api/trips/<trip_id>/fare-search")
     def search(trip_id):
@@ -62,7 +75,7 @@ def register_fares(app, helpers):
         details = select_offer(db(), data.get("searchId"), data.get("offerId"))
         quote_id, timestamp = str(uuid.uuid4()), helpers["now_iso"]()
         # Unique submission constraint + re-read makes concurrent retries idempotent.
-        db().execute("INSERT OR IGNORE INTO fare_quotes VALUES (?,?,?,?,?)",
+        db().execute("INSERT INTO fare_quotes VALUES (?,?,?,?,?) ON CONFLICT DO NOTHING",
                      (quote_id, trip_id, client_id, json.dumps(details), timestamp))
         db().commit()
         row = db().execute("SELECT * FROM fare_quotes WHERE trip_id=? AND client_id=?", (trip_id, client_id)).fetchone()
