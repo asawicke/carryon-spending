@@ -47,7 +47,8 @@ class DeploymentTests(unittest.TestCase):
 
     def test_secure_cookie_and_production_origin(self):
         from backend.database import connect_database
-        client=self.production().test_client()
+        app=self.production(); app.config['GOOGLE_CLIENT_ID']='configured.apps.googleusercontent.com'
+        client=app.test_client()
         # This test isolates the HTTPS/cookie layer. Separate integration tests use real PostgreSQL.
         with patch('backend.app.connect_database',side_effect=lambda _:connect_database(self.path)):
             response=client.post('/api/account/register',base_url='http://carryon.example',
@@ -56,8 +57,16 @@ class DeploymentTests(unittest.TestCase):
             self.assertEqual(response.status_code,201,response.json)
             cookie=response.headers['Set-Cookie']
             self.assertIn('Secure;',cookie); self.assertIn('HttpOnly;',cookie); self.assertIn('SameSite=Strict',cookie)
+            self.assertIn('Domain=carryon.example',cookie)
             response=client.post('/api/account/logout',base_url='https://carryon.example',headers={'Origin':'https://impostor.example'},json={})
             self.assertEqual(response.status_code,403)
+            logout=client.post('/api/account/logout',base_url='https://carryon.example',json={})
+            self.assertEqual(logout.status_code,200)
+            self.assertIn('Domain=carryon.example',logout.headers['Set-Cookie'])
+            self.assertEqual(client.get('/api/trips',base_url='https://carryon.example').status_code,401)
+            challenge=client.get('/api/account/google/challenge',base_url='https://carryon.example')
+            self.assertEqual(challenge.status_code,200)
+            self.assertIn('Domain=carryon.example',challenge.headers['Set-Cookie'])
 
     def test_parameter_binding_preserves_literal_sql_and_bound_data(self):
         self.assertEqual(bind_parameters("SELECT '?' AS literal, ? AS value, ':name' AS text"),"SELECT '?' AS literal, %s AS value, ':name' AS text")

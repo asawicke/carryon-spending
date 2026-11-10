@@ -4,6 +4,7 @@ import re
 import secrets
 import time
 from .database import IntegrityErrors
+from .cookies import cookie_options
 
 from flask import request, make_response
 from werkzeug.security import generate_password_hash
@@ -44,7 +45,7 @@ def register_google(app, helpers, signed_in, limit_login):
             db().execute("INSERT INTO login_nonces VALUES (?,?)", (hashlib.sha256(nonce.encode()).hexdigest(), timestamp + 1800))
         db().commit()
         response = make_response({"nonce": nonce})
-        response.set_cookie(NONCE_COOKIE, nonce, max_age=1800, httponly=True, samesite="Strict", secure=app.config.get("COOKIE_SECURE", False))
+        response.set_cookie(NONCE_COOKIE, nonce, max_age=1800, **cookie_options(app))
         return response
 
     @app.post("/api/account/google")
@@ -92,5 +93,5 @@ def register_google(app, helpers, signed_in, limit_login):
         except IntegrityErrors:
             db().rollback(); raise error("This account changed during sign-in. Refresh and try again.", 409)
         response = signed_in(user)
-        response.delete_cookie(NONCE_COOKIE)
+        response.delete_cookie(NONCE_COOKIE, **cookie_options(app))
         return response

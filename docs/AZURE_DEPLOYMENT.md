@@ -12,6 +12,10 @@ CarryOn uses one **Azure Functions Flex Consumption** app and one **Azure Databa
 - The app uses `vnet-carryon-pilot/functions` and a private PostgreSQL endpoint at `10.77.0.36`, with private DNS. This avoids changing serverless egress IPs. Public database access will be disabled after live verification; the temporary laptop/firewall rules are not required for the hosted app.
 - Capped Azure Monitor startup logs are configured separately from user records. Never log passwords, provider keys, tokens or request bodies.
 
+## Cookie compatibility
+
+Azure Functions serialized host-only cookies with an empty domain, so clients rejected them. Production cookies explicitly use the exact app hostname; the same scope and secure attributes apply to creation and deletion of session and Google nonce cookies. Local cookies remain host-only. Deployment checks verify this behavior.
+
 ## Private app settings
 
 Set these in the Azure function app configuration, never the frontend or Git:

@@ -4,6 +4,7 @@ import re
 import secrets
 import time
 from .database import table_columns, IntegrityErrors
+from .cookies import cookie_options
 
 from flask import g, request, make_response, has_request_context
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -73,8 +74,7 @@ def register_accounts(app, helpers):
         db().execute("INSERT INTO sessions VALUES (?,?,?)", (hashlib.sha256(token.encode()).hexdigest(), user["id"], time.time() + 7 * 86400))
         db().commit()
         response = make_response({"user": {key: user[key] for key in ("id", "name", "email")}})
-        response.set_cookie(COOKIE, token, max_age=7 * 86400, httponly=True, samesite="Strict",
-                            secure=app.config.get("COOKIE_SECURE", False))
+        response.set_cookie(COOKIE, token, max_age=7 * 86400, **cookie_options(app))
         return response
 
     @app.get("/api/account")
@@ -82,7 +82,7 @@ def register_accounts(app, helpers):
         response = make_response({"user": g.user, "googleClientId": app.config.get("GOOGLE_CLIENT_ID", ""),
                                   "canImportDevice": app.config.get('ALLOW_DEVICE_IMPORT', True)})
         if request.cookies.get(COOKIE) and not g.user:
-            response.delete_cookie(COOKIE)
+            response.delete_cookie(COOKIE, **cookie_options(app))
         return response
 
     @app.post("/api/account/register")
@@ -135,7 +135,7 @@ def register_accounts(app, helpers):
         token = request.cookies.get(COOKIE, "")
         db().execute("DELETE FROM sessions WHERE token_hash=? OR expires<?", (hashlib.sha256(token.encode()).hexdigest(), time.time()))
         db().commit()
-        response = make_response({"user": None}); response.delete_cookie(COOKIE)
+        response = make_response({"user": None}); response.delete_cookie(COOKIE, **cookie_options(app))
         return response
 
     @app.post("/api/account/import-device")

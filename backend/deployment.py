@@ -24,7 +24,7 @@ def configure_deployment(app):
         raise RuntimeError('Production requires a persistent PostgreSQL DATABASE_URL.')
     if parse_qs(urlsplit(app.config['DATABASE_PATH']).query).get('sslmode') != ['verify-full']:
         raise RuntimeError('Production DATABASE_URL must use sslmode=verify-full.')
-    app.config.update(PUBLIC_ORIGIN=origin.rstrip('/'), COOKIE_SECURE=True,
+    app.config.update(PUBLIC_ORIGIN=origin.rstrip('/'), COOKIE_SECURE=True, COOKIE_DOMAIN=parsed.hostname,
                       ALLOW_DEVICE_IMPORT=False, TRUSTED_HOSTS=[parsed.hostname])
     # App Service terminates TLS before its private app container. Never enable
     # this trust on a server exposed directly to untrusted clients.
